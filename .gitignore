@@ -1,0 +1,38 @@
+#file types
+_ReSharper.*
+*.resharper
+*.DS_Store
+*.tlog
+*.vsp
+*.psess
+*.v11.suo
+*.user
+*.suo
+#*.Framework.XML
+
+#specific files
+web.[Cc]onnectionStrings.config
+app.[Cc]onnectionStrings.config
+desktop.ini
+Quartz.xml
+StyleCop.Cache
+
+#build artifacts
+**/[Bb]in/[Dd]ebug
+**/[Bb]in/[Rr]elease
+**/[Oo]bj/[Dd]ebug
+**/[Oo]bj/[Rr]elease
+
+#specific folders
+.vs/
+.vshistory/
+.localhistory/
+.vshistory/
+
+Packages/*
+
+# javascript deps
+node_modules
+.cache
+*.map
+/packages/

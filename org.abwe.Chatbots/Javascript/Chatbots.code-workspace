@@ -1,0 +1,154 @@
+{
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug Framework",
+				"request": "launch",
+				"port": 9222,
+				"type": "chrome",
+				"url": "http://localhost:6229",
+				"webRoot": "${workspaceFolder:Rock.JavaScript.Obsidian}/dist/"
+			},
+			{
+				"name": "Debug Framework (Attach to existing Chrome)",
+				"request": "attach",
+				"port": 9222,
+				"type": "chrome",
+				"urlFilter": "http://localhost:6229*",
+				"webRoot": "${workspaceFolder:Rock.JavaScript.Obsidian}/dist/"
+			},
+			{
+				"name": "Debug Blocks",
+				"request": "launch",
+				"port": 9222,
+				"type": "chrome",
+				"url": "http://localhost:6229",
+				"webRoot": "${workspaceFolder:Rock.JavaScript.Obsidian.Blocks}/dist/"
+			},
+			{
+				"name": "Debug Blocks (Attach to existing Chrome)",
+				"request": "attach",
+				"port": 9222,
+				"type": "chrome",
+				"urlFilter": "http://localhost:6229*",
+				"webRoot": "${workspaceFolder:Rock.JavaScript.Obsidian.Blocks}/dist/"
+			},
+			{
+				"name": "Debug Jest Tests",
+				"type": "node",
+				"request": "launch",
+				"runtimeArgs": [
+					"--inspect-brk",
+					"--preserve-symlinks",
+					"${workspaceRoot}/node_modules/jest/bin/jest.js",
+					"--runInBand",
+				],
+				"console": "integratedTerminal",
+				"internalConsoleOptions": "neverOpen"
+			}
+		]
+	},
+	"extensions": {
+		"recommendations": [
+			"dbaeumer.vscode-eslint",
+			"vue.volar",
+			"orta.vscode-jest",
+			"vue.vscode-typescript-vue-plugin"
+		]
+	},
+	"folders": [
+		{
+			"path": "."
+		},
+	],
+	"settings": {
+		"files.associations": {
+			"*.obs": "vue"
+		},
+		"volar.format.initialIndent": {
+			"typescript": true,
+			"html": true
+		},
+		"volar.completion.preferredAttrNameCase": "camel",
+		"volar.completion.preferredTagNameCase": "pascal",
+		"volar.vueserver.additionalExtensions": [
+			"obs"
+		],
+		"vue.features.complete.propNameCasing": "camel",
+		"vue.complete.casing.props": "camel",
+		"vue.complete.casing.tags": "pascal",
+		"vue.server.additionalExtensions": [
+			"obs"
+		],
+		"files.trimTrailingWhitespace": true,
+		"html.format.wrapAttributes": "preserve-aligned",
+		"html.format.wrapLineLength": 0,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.eslint": "explicit"
+		},
+		"eslint.validate": [
+			"javascript",
+			"javascriptreact",
+			"typescript",
+			"typescriptreact",
+			"vue"
+		],
+		"[vue]": {
+			"editor.defaultFormatter": "Vue.volar"
+		},
+		"css.format.spaceAroundSelectorSeparator": true,
+		"typescript.tsdk": "node_modules/typescript/lib",
+		"workbench.settings.openDefaultSettings": false,
+		"workbench.settings.openDefaultKeybindings": false,
+		"css.lint.duplicateProperties": "warning",
+		"css.lint.zeroUnits": "warning",
+		"css.lint.propertyIgnoredDueToDisplay": "warning",
+		"liveServer.settings.ChromeDebuggingAttachment": false,
+		"liveServer.settings.mount": []
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Build Obsidian Blocks",
+				"type": "shell",
+				"command": "npm run build",
+				"presentation": {
+					"showReuseMessage": false,
+					"clear": true,
+					"group": "build"
+				},
+				"group": {
+					"kind": "build",
+					"isDefault": false
+				},
+				"options": {
+					"cwd": "."
+				}
+			},
+			{
+				"label": "Watch Obsidian Blocks",
+				"type": "shell",
+				"command": "npm run --silent watch",
+				"presentation": {
+					"showReuseMessage": false,
+					"clear": true,
+					"echo": false,
+					"panel": "dedicated"
+				},
+				"options": {
+					"cwd": "${workspaceFolder}"
+				},
+				"isBackground": true,
+				"problemMatcher": {
+					"base": "$vite",
+					"background": {
+						"beginsPattern": "^rollup v",
+						"endsPattern": "waiting for changes\\.\\.\\.$"
+					}
+				}
+			}
+		]
+	}
+}

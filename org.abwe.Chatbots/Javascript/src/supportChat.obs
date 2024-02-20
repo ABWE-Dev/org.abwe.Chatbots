@@ -1,0 +1,453 @@
+<style scoped>
+.chat-root {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.chat-root.floating {
+    position: fixed;
+    right: 1rem;
+    bottom: 2rem;
+    z-index: 2000;
+}
+
+.chat-root.floating .open-chat {
+    border-radius: 50%;
+    height: 50px;
+    width: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 10px 0 rgb(179, 179, 179);
+}
+
+.chat-panel {
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+    width: 100%;
+    background: #fff;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    box-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.03), 0 1px 3px 0 rgba(0, 0, 0, 0.08)
+}
+
+.chat-root.fullscreen .chat-panel {
+    height: 100vh;
+}
+
+.chat-root.floating .chat-panel {
+    box-shadow: 0 0 10px 0 rgb(0 0 0 / 50%);
+    width: 700px;
+    height: 700px;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: .5rem;
+}
+
+.chat-panel .history {
+    position: relative;
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    padding: 1rem;
+}
+
+.chat-panel .input {
+    padding: 1rem;
+    background: #efefef;
+}
+
+.response-header {
+    font-size: .75em;
+    color: #737475;
+}
+
+.response-header.bot {
+    align-self: flex-start;
+}
+
+.response-header.human {
+    align-self: flex-end;
+}
+
+.response {
+    padding: 1rem;
+    border-radius: .5rem;
+    max-width: 75%;
+}
+
+:deep(.response p:last-child) {
+    margin-bottom: 0;
+}
+
+.response.human {
+    text-align: left;
+    background: #f0f0f0;
+    align-self: flex-end;
+}
+
+.response.bot {
+    text-align: left;
+    background: #d0f0ff;
+    align-self: flex-start;
+}
+
+a.response.article {
+    color: #000;
+}
+
+a.response.article i {
+    vertical-align: middle;
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: transform .2s ease, opacity .2s ease;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+    transform: translateY(100px);
+    opacity: 0;
+}
+
+.ai-warning {
+    margin-top: 1rem;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    font-size: .75rem;
+    text-align: center;
+}
+
+.stop-button {
+    align-self: center;
+    width: 100px;
+    margin-top: auto;
+    bottom: 1rem;
+}
+
+.header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding: .5rem 1rem;
+}
+
+.header .btn {
+    color: white;
+}
+
+.header h3 {
+    margin: 0;
+    padding: 0;
+    font-size: 1rem;
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.typing-indicator span {
+    height: 8px;
+    width: 8px;
+    margin: 0 2px;
+    background-color: #9E9E9E;
+    border-radius: 50%;
+    display: inline-block;
+    animation: typing 1.4s infinite both;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0);
+    }
+
+    40% {
+        transform: scale(1);
+    }
+}
+</style>
+
+<template>
+    <div class="chat-root" :class="{ floating: floating, fullscreen: isFullscreen }" ref="chatRoot">
+        <Transition name="slide-fade">
+            <div class="chat-panel card" v-if="!floating || chatPanelVisible">
+                <div class="header bg-primary">
+                    <h3>Chat with <i class="fal fa-robot"></i></h3>
+                    <div class="btn btn-link" @click="requestFullScreen" v-if="!isFullscreen"><i class="fal fa-expand"></i></div>
+                </div>
+                <div class="ai-warning" style="line-height: 1;">
+                    <i class="fa fa-exclamation-triangle pull-left mr-3 text-muted"></i>
+                    Computer generated responses may not be accurate. Please refer to the policies for more information.
+                </div>
+                <div class="history" ref="historyRef">
+                    <div class="response-header">
+                        <i class="fa fa-robot"></i> ABWE Bot
+                    </div>
+                    <div class="response bot">
+                        What can I help you with? You can ask questions like, "How do I submit an expense report?", "What is ABWEs stance on language learning?", or "What are my current benefits with ABWE?"
+                    </div>
+                    <template v-for="(message, index) in conversationHistory" :key="index">
+                        <div class="response-header bot" v-if="message.type == 'bot'">
+                            <i class="fa fa-robot"></i> ABWE Bot
+                        </div>
+                        <div class="response-header human" v-if="message.type == 'human'">
+                            <i class="fa fa-user"></i> You
+                        </div>
+                        <div :class="['response', message.type]" v-if="message.sources">
+                            Here are some resources that might help:<br>
+                            <ul>
+                                <li v-for="source in message.sources"><a :href="source.url">{{ source.name }}</a></li>
+                            </ul>
+                        </div>
+
+                        <!-- <a v-if="message.sources" v-for="source in message.sources" :href="source.url" :class="['response', 'article', message.type]">
+                            <i class="fal fa-file-alt fa-2x mr-3"></i>
+                            {{ source.name }}
+                        </a> -->
+
+                        <div :class="['response', message.type]" v-if="message.content" :innerHTML="markdownToHtml(message.content)">
+                        </div>
+
+                        <div :class="['response', message.type]" v-if="!message.content">
+                            <div class="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div v-if="error" class="response bot">
+                        {{ error }}
+                    </div>
+
+                    <!-- <button class="btn btn-danger btn-link stop-button" v-if="responding" @click="abortFetch"><i class="fa fa-square"></i> Stop</button> -->
+                </div>
+                <div class="input">
+                    <div class="input-group">
+                        <input class="form-control" placeholder="Ask a question..." v-model="currentMessage" @keyup.enter="sendMessage" />
+                        <span class="input-group-btn">
+                            <button class="btn btn-default text-muted" v-if="!responding" type="button" @click="sendMessage" style="border-left: 0;"><i class="fal fa-paper-plane"></i></button>
+                            <button class="btn btn-default text-muted" v-if="responding" type="button" @click="abortFetch" style="border-left: 0;"><i class="fa fa-square"></i></button>
+                        </span>
+                    </div><!-- /input-group -->
+                </div>
+            </div>
+        </Transition>
+        <div class="btn btn-primary open-chat" v-if="floating" @click="chatPanelVisible = !chatPanelVisible">
+            <i class="fas fa-comment" v-if="!chatPanelVisible"></i>
+            <i class="fas fa-times" v-else></i>
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+
+    declare var showdown;
+    import { useStore } from '@Obsidian/PageState';
+    import { useBlockGuid, useConfigurationValues, useInvokeBlockAction } from '@Obsidian/Utility/block';
+    import { newGuid } from '@Obsidian/Utility/guid';
+    import "https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js";
+    import { nextTick, onMounted, onUnmounted, ref } from 'vue';
+    import { SupportChatBox } from './ViewModels/SupportChatBox';
+
+
+    // Properties
+    const InvokeBlockAction = useInvokeBlockAction();
+    const config = useConfigurationValues<SupportChatBox>();
+    const guid = useBlockGuid();
+    const store = useStore();
+
+    type source = {
+        name: string;
+        url: string;
+        id: number;
+    }
+
+    type historyMessage = {
+        content: string;
+        type: string;
+        sources?: source[];
+    }
+
+    const conversationHistory = ref<historyMessage[]>([]);
+    const currentMessage = ref('');
+    const chatPanelVisible = ref(false);
+    const historyRef = ref<HTMLElement | null>(null);
+    const chatRoot = ref<HTMLElement | null>(null);
+    const responding = ref(false);
+    const error = ref<string>("");
+    const sessionId = newGuid();
+    const isFullscreen = ref<boolean>(false);
+    const floating = ref<boolean>(config.style == "Popup");
+
+    let abortController = new AbortController();
+
+    // Functions
+    function markdownToHtml(markdown: string) {
+        const converter = new showdown.Converter({ openLinksInNewWindow: true });
+        return converter.makeHtml(markdown);
+    }
+
+    // Function to update the isFullscreen based on the document's fullscreen state
+    function updateFullscreenState() {
+        isFullscreen.value = document.fullscreenElement === chatRoot.value;
+    }
+
+    onMounted(() => {
+        // Listen for fullscreen change events
+        document.addEventListener('fullscreenchange', updateFullscreenState);
+    });
+
+    onUnmounted(() => {
+        // Clean up event listener
+        document.removeEventListener('fullscreenchange', updateFullscreenState);
+    });
+
+    // Events
+    function requestFullScreen() {
+        chatRoot.value?.requestFullscreen();
+    }
+
+    function abortFetch() {
+        if (responding.value) {
+            abortController.abort();
+            responding.value = false;
+        }
+    }
+
+    async function sendMessage() {
+        if (responding.value == true) return;
+
+        let message = currentMessage.value;
+        currentMessage.value = '';
+        error.value = '';
+
+        conversationHistory.value.push({
+            content: message,
+            type: 'human'
+        });
+
+        conversationHistory.value.push({
+            content: '',
+            type: 'bot'
+        })
+
+        nextTick(() => {
+            if (historyRef.value) historyRef.value.scrollTop = historyRef.value.scrollHeight;
+        });
+
+        try {
+            abortController = new AbortController();
+            responding.value = true;
+
+            const response = await fetch(`/api/v2/BlockActions/${store.state.pageGuid}/${guid}/GetMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: message,
+                    sessionId: sessionId
+                }),
+                // body: JSON.stringify({
+                //     message: JSON.stringify({
+                //         input: {
+                //             question: message,
+                //             chat_history: conversationHistory.value.slice(0, -1).map((message) => {
+                //                 return {
+                //                     content: message.content,
+                //                     type: message.type
+                //                 }
+                //             })
+                //         }
+                //     })
+                // }),
+                signal: abortController.signal
+            });
+
+            if (!response.body) return;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let result = '';
+            let finalString = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+
+                if (done) {
+                    break;
+                }
+
+                result += decoder.decode(value);
+
+                let endOfEvent = result.indexOf('\r\n');
+                while (endOfEvent !== -1) {
+                    // console.log("Found at", endOfEvent);
+                    // console.log("Processing: ", result);
+                    const line = result.slice(0, endOfEvent);
+                    result = result.slice(endOfEvent + 2);
+
+                    // if (line == '') continue;
+                    // console.log(line);
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data.trim() == '' || data.trim() == 'null') continue;
+                        let autoScroll = false;
+                        if (historyRef.value) {
+                            autoScroll = historyRef.value?.scrollHeight - historyRef.value?.clientHeight == Math.ceil(historyRef.value?.scrollTop);
+                        }
+
+                        if (data.startsWith("DESCRIPTOR:")) {
+                            conversationHistory.value[conversationHistory.value.length - 1].sources = (<source[]>JSON.parse(data.slice(11))).reduce((acc, curr) => {
+                                let duplicate = acc.find(s => s.id === curr.id);
+                                if (!duplicate) {
+                                    acc.push(curr);
+                                }
+                                return acc;
+                            }, <source[]>[]);
+                        } else {
+                            finalString += JSON.parse(data);
+                            conversationHistory.value[conversationHistory.value.length - 1].content = finalString;
+                        }
+
+                        if (autoScroll) {
+                            nextTick(() => {
+                                if (historyRef.value) historyRef.value.scrollTop = historyRef.value.scrollHeight;
+                            });
+                        }
+                    } else {
+                        // console.log(lines);
+                        console.error('Error parsing event:', line);
+                    }
+                    endOfEvent = result.indexOf('\r\n');
+                }
+            }
+
+            responding.value = false;
+        }
+        catch (e) {
+            console.error('Error:', e);
+            // responding.value = false;
+            // error.value = "An error occurred. Please try again.";
+            // conversationHistory.value.pop();
+        }
+    }
+</script>
