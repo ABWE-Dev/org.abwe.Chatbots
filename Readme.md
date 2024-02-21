@@ -1,7 +1,7 @@
 # Requirements
 
-Elasticsearch 8.10 or greater
-Rock v16 or greater
+- Elasticsearch 8.10 or greater
+- Rock v16 or greater
 
 # Setup
 
