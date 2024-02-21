@@ -16,3 +16,5 @@
 9. Setup and run a Build Chatbot Index job (this will incur charges with Open AI to generate the embeddings)
     - This will only index content channels that are checked in the settings of a Support Chat block
 10. Chat!
+
+![Chat](https://github.com/ABWE-Dev/org.abwe.Chatbots/assets/5644394/46f793a5-66cf-42bc-bebc-c2c7fa43ea7d)
