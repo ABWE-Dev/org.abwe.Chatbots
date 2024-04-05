@@ -97,7 +97,7 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
       }), createTextVNode(" ABWE Bot ")], -1));
       var _hoisted_8 = _withScopeId(() => createElementVNode("div", {
         class: "response bot"
-      }, " What can I help you with? You can ask questions like, \"How do I submit an expense report?\", \"What is ABWEs stance on language learning?\", or \"What are my current benefits with ABWE?\" ", -1));
+      }, " What can I help you with? You can ask questions like, \"How do I submit an expense report?\", \"What is ABWE's stance on language learning?\", or \"What are my current benefits with ABWE?\" ", -1));
       var _hoisted_9 = {
         key: 0,
         class: "response-header bot"
@@ -313,7 +313,8 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
                   class: normalizeClass(['response', message.type])
                 }, [_hoisted_17, _hoisted_18, createElementVNode("ul", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(message.sources, source => {
                   return openBlock(), createElementBlock("li", null, [createElementVNode("a", {
-                    href: source.url
+                    href: source.url,
+                    target: "_blank"
                   }, toDisplayString(source.name), 9, _hoisted_19)]);
                 }), 256))])], 2)) : createCommentVNode("v-if", true), createCommentVNode(" <a v-if=\"message.sources\" v-for=\"source in message.sources\" :href=\"source.url\" :class=\"['response', 'article', message.type]\">\r\n                            <i class=\"fal fa-file-alt fa-2x mr-3\"></i>\r\n                            {{ source.name }}\r\n                        </a> "), message.content ? (openBlock(), createElementBlock("div", {
                   key: 3,

@@ -203,7 +203,7 @@ a.response.article i {
                         <i class="fa fa-robot"></i> ABWE Bot
                     </div>
                     <div class="response bot">
-                        What can I help you with? You can ask questions like, "How do I submit an expense report?", "What is ABWEs stance on language learning?", or "What are my current benefits with ABWE?"
+                        What can I help you with? You can ask questions like, "How do I submit an expense report?", "What is ABWE's stance on language learning?", or "What are my current benefits with ABWE?"
                     </div>
                     <template v-for="(message, index) in conversationHistory" :key="index">
                         <div class="response-header bot" v-if="message.type == 'bot'">
@@ -215,7 +215,7 @@ a.response.article i {
                         <div :class="['response', message.type]" v-if="message.sources">
                             Here are some resources that might help:<br>
                             <ul>
-                                <li v-for="source in message.sources"><a :href="source.url">{{ source.name }}</a></li>
+                                <li v-for="source in message.sources"><a :href="source.url" target="_blank">{{ source.name }}</a></li>
                             </ul>
                         </div>
 
