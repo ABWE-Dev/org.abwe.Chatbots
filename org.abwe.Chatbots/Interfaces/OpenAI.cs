@@ -82,7 +82,7 @@ namespace org.abwe.Chatbots.Interfaces
             }
         }
 
-        public async Task<string> GetResponse(string input, string model = Models.GPT4, Action<string> handle = null)
+        public async Task<string> GetResponse(string input, string model = Models.GPT4Turbo, Action<string> handle = null)
         {
             var jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(new
             {

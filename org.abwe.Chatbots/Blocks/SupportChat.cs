@@ -249,7 +249,7 @@ Question: {{ Input }}
 
                         var prePrompt = GetPrePrompt(message, history.History.Take(history.History.Count - 1).ToList());
 
-                        var revisedQuestion = await openAi.GetResponse(prePrompt);
+                        var revisedQuestion = await openAi.GetResponse(prePrompt, model: modelToUse);
                         history.AddMessage(ChatHistoryAgent.System, revisedQuestion);
                         history.Save(this.BlockCache, this.RequestContext);
 
