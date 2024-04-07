@@ -74,7 +74,7 @@ Question: {{ Input }}
     [ContentChannelsField("Content Channels", "The content channels to search for responses.", false, "", "", 4)]
     [CustomRadioListField("Style", "The style of the chat", "Inline,Popup", true, "Inline", "", 5)]
     [LinkedPage("Content Channel Item Detail Page", "This page will be used as the landing page for source links that are clicked", true, "", "", 6)]
-    [CustomRadioListField("Model", "The OpenAI model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku", true, "GPT3.5", "", 5)]
+    [CustomRadioListField("Model", "The OpenAI model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku,Claude Sonnet,Claude Opus", true, "GPT3.5", "", 5)]
 
     #endregion
 
@@ -222,6 +222,7 @@ Question: {{ Input }}
                         {
                             var model = GetAttributeValue("Model");
                             var modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
+                            var llmVendor = "openai";
                             switch (model) {
                                 case "GPT3.5":
                                     modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
@@ -233,7 +234,16 @@ Question: {{ Input }}
                                     modelToUse = Interfaces.OpenAI.Models.GPT4Turbo;
                                     break;
                                 case "Claude Haiku":
+                                    llmVendor = "anthropic";
                                     modelToUse = Interfaces.Claude.Models.Haiku;
+                                    break;
+                                case "Claude Sonnet":
+                                    llmVendor = "anthropic";
+                                    modelToUse = Interfaces.Claude.Models.Sonnet;
+                                    break;
+                                case "Claude Opus":
+                                    llmVendor = "anthropic";
+                                    modelToUse = Interfaces.Claude.Models.Opus;
                                     break;
                                 default:
                                     modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
@@ -243,7 +253,7 @@ Question: {{ Input }}
                             var openAi = new Interfaces.OpenAI.OpenAI(openAIKey);
                             IResponseGenerator llm;
                             
-                            if (modelToUse == Interfaces.Claude.Models.Haiku) {
+                            if (llmVendor == "anthropic") {
                                 var claudeAPIKey = Util.GetClaudeKey();
                                 llm = new Interfaces.Claude.Claude(claudeAPIKey);
                             } else {
