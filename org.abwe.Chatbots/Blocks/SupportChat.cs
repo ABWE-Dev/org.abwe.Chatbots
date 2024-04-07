@@ -74,7 +74,8 @@ Question: {{ Input }}
     [ContentChannelsField("Content Channels", "The content channels to search for responses.", false, "", "", 4)]
     [CustomRadioListField("Style", "The style of the chat", "Inline,Popup", true, "Inline", "", 5)]
     [LinkedPage("Content Channel Item Detail Page", "This page will be used as the landing page for source links that are clicked", true, "", "", 6)]
-    [CustomRadioListField("Model", "The OpenAI model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku,Claude Sonnet,Claude Opus", true, "GPT3.5", "", 5)]
+    [CustomRadioListField("Pre-Prompt Model", "Using a more expensive model for the pre-prompt can improve results, especially for Anthropic.", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku,Claude Sonnet,Claude Opus", true, "GPT3.5", "", 7, AttributeKey.PrePromptModel)]
+    [CustomRadioListField("Model", "The model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive. For Anthropic, Opus is the most expensive, and Haiku least.", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku,Claude Sonnet,Claude Opus", true, "GPT3.5", "", 8, AttributeKey.Model)]
 
     #endregion
 
@@ -106,7 +107,9 @@ Question: {{ Input }}
 
         private static class AttributeKey
         {
-            public const string PersonProfilePage = "PersonProfilePage";
+            public const string PrePrompt = "PrePrompt";
+            public const string Model = "Model";
+            public const string PrePromptModel = "PrePromptModel";
         }
 
         #endregion Keys
@@ -249,21 +252,65 @@ Question: {{ Input }}
                                     modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
                                     break;
                             }
+
+                            var prePromptModel = GetAttributeValue(AttributeKey.PrePromptModel);
+                            var prePromptModelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
+                            var prePromptLLMVendor = "openai";
+                            switch (prePromptModel)
+                            {
+                                case "GPT3.5":
+                                    prePromptModelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
+                                    break;
+                                case "GPT4":
+                                    prePromptModelToUse = Interfaces.OpenAI.Models.GPT4;
+                                    break;
+                                case "GPT4Turbo":
+                                    prePromptModelToUse = Interfaces.OpenAI.Models.GPT4Turbo;
+                                    break;
+                                case "Claude Haiku":
+                                    prePromptLLMVendor = "anthropic";
+                                    prePromptModelToUse = Interfaces.Claude.Models.Haiku;
+                                    break;
+                                case "Claude Sonnet":
+                                    prePromptLLMVendor = "anthropic";
+                                    prePromptModelToUse = Interfaces.Claude.Models.Sonnet;
+                                    break;
+                                case "Claude Opus":
+                                    prePromptLLMVendor = "anthropic";
+                                    prePromptModelToUse = Interfaces.Claude.Models.Opus;
+                                    break;
+                                default:
+                                    prePromptModelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
+                                    break;
+                            }
                             var openAIKey = Util.GetOpenAIKey();
+                            var claudeAPIKey = Util.GetClaudeKey();
+
+                            // OpenAI is currently always used for embeddings
                             var openAi = new Interfaces.OpenAI.OpenAI(openAIKey);
-                            IResponseGenerator llm;
+
+                            IResponseGenerator LLM;
+                            IResponseGenerator prepromptLLM;
                             
                             if (llmVendor == "anthropic") {
-                                var claudeAPIKey = Util.GetClaudeKey();
-                                llm = new Interfaces.Claude.Claude(claudeAPIKey);
+                                
+                                LLM = new Interfaces.Claude.Claude(claudeAPIKey);
                             } else {
-                                llm = openAi;
+                                LLM = openAi;
+                            }
+
+                            if (prePromptLLMVendor == "anthropic") {
+                                prepromptLLM = new Interfaces.Claude.Claude(claudeAPIKey);
+                            } else {
+                                prepromptLLM = openAi;
                             }
 
                             var elasticsearch = new Elasticsearch(openAi);
                             var linkedPage = GetAttributeValue("ContentChannelItemDetailPage");
                             var docs = await elasticsearch.SearchVector<ContentChannelItemIndex>(message, contentChannelIds);
 
+                            // If we're using two-pass chunks, we need to get the larger chunks
+                            // to pass to the LLM as it will have more context.
                             var fullDocs = docs.Where(d => d.parentChunkId == null).ToList();
                             var partialDocs = docs.Where(d => d.parentChunkId != null).ToList();
                             var partialParentIds = partialDocs.Select(d => d.parentChunkId.ToString()).Distinct().ToList();
@@ -284,7 +331,7 @@ Question: {{ Input }}
 
                             var prePrompt = GetPrePrompt(message, history.History.Take(history.History.Count - 1).ToList());
 
-                            var revisedQuestion = await llm.GetResponse(prePrompt, model: modelToUse);
+                            var revisedQuestion = await prepromptLLM.GetResponse(prePrompt, model: prePromptModelToUse);
                             history.AddMessage(ChatHistoryAgent.System, revisedQuestion);
                             history.Save(this.BlockCache, this.RequestContext);
 
@@ -293,7 +340,7 @@ Question: {{ Input }}
                             var text = "";
                             try
                             {
-                                await llm.GetResponse(prompt, model: modelToUse, (string output) =>
+                                await LLM.GetResponse(prompt, model: modelToUse, (string output) =>
                                 {
                                     text += output;
                                     writer.WriteLine("data: " + JsonConvert.SerializeObject(output));
