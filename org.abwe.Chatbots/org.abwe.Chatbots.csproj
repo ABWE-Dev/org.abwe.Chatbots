@@ -51,9 +51,12 @@
       <HintPath>..\..\Rock\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.QualityTools.Testing.Fakes, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\Rock\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\Rock\RockWeb\Bin\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Quartz, Version=2.0.0.100, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -115,13 +118,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Blocks\SupportChat.cs" />
+    <Compile Include="Interfaces\Claude.cs" />
+    <Compile Include="Interfaces\Claude\Response.cs" />
+    <Compile Include="Interfaces\IResponseGenerator.cs" />
     <Compile Include="Jobs\BuiltChatBotIndex.cs" />
+    <Compile Include="Migration\001_GlobalAttribute.cs" />
     <Compile Include="Model\ChatHistory.cs" />
     <Compile Include="Model\ContentChannelItemIndexDocument.cs" />
-    <Compile Include="Model\IEmbeddingGenerator.cs" />
+    <Compile Include="Interfaces\IEmbeddingGenerator.cs" />
     <Compile Include="Interfaces\LangChain.cs" />
     <Compile Include="Interfaces\OpenAI.cs" />
-    <Compile Include="Model\SystemGuid.cs" />
+    <Compile Include="SystemGuid\Attributes.cs" />
+    <Compile Include="SystemGuid\Interactions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Interfaces\OpenAI\Response.cs" />
     <Compile Include="Stores\Elasticsearch.cs" />
@@ -131,6 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <Fakes Include="Fakes\System.Text.Json.fakes" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

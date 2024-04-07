@@ -29,5 +29,7 @@ namespace org.abwe.Chatbots
         public string Text { get; set; }
         public ContentChannelItemIndexDocumentMetadata Metadata { get; set; }
         public List<float> Vector { get; set; }
+        public Guid ChunkId { get; set; }
+        public Guid? ParentChunkId { get; set; }
     }
 }

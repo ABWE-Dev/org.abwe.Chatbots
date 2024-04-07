@@ -10,6 +10,7 @@
 using Rock;
 using Rock.Data;
 using Rock.Model;
+using Rock.Web.Cache;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,11 @@ namespace org.abwe.Chatbots
             var OpenAIComponentGuid = "8D3F25B1-4891-31AA-4FA6-365F5C808563".AsGuid();
             var attributeValue = avService.Queryable().Where(av => av.Attribute.Key == "SecretKey" && av.Attribute.EntityType.Guid == OpenAIComponentGuid).FirstOrDefault();
             return attributeValue.Value;
+        }
+
+        public static string GetClaudeKey()
+        {
+            return GlobalAttributesCache.Get().GetValue("ClaudeAPIKey");
         }
     }
 }

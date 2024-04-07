@@ -21,15 +21,16 @@ using org.abwe.Chatbots.Interfaces;
 using Rock;
 using Rock.Data;
 using Rock.Model;
+using Rock.Web.Cache;
 
 namespace org.abwe.Chatbots.Stores
 {
     public class Elasticsearch
     {
-        internal static string IndexName = "org_abwe_chatbots";
-
         private ElasticsearchClient _client;
         private IEmbeddingGenerator _embeddingGenerator;
+        private string IndexName = "org_abwe_chatbots";
+        private static string IndexAttributeKey = "AbweChatbotIndex";
 
         public Elasticsearch(IEmbeddingGenerator embeddingGenerator)
         {
@@ -46,9 +47,11 @@ namespace org.abwe.Chatbots.Stores
 
             var settings = new ElasticsearchClientSettings(new Uri(nodeUrl.Value))
                 .CertificateFingerprint(certificateFingerprint.Value)
-                .Authentication(new BasicAuthentication(Username.Value, Password.Value));
+                .Authentication(new BasicAuthentication(Username.Value, Password.Value))
+                .EnableDebugMode();
 
             _client = new ElasticsearchClient(settings);
+            IndexName = GlobalAttributesCache.Get().GetValue(IndexAttributeKey).IfEmpty("org_abwe_chatbots");
         }
 
         public void RecreateIndex() {
@@ -70,19 +73,38 @@ namespace org.abwe.Chatbots.Stores
 
             var response = _client.Indices.Create(IndexName, d =>
             {
-                d.Mappings(m => m.Properties<ContentChannelItemIndexDocument>(p =>
-                {
-                    p.DenseVector("vector", dv =>
-                    {
-                        dv.Similarity("cosine");
-                        dv.Dims(1024);
-                        dv.Index(true);
-                    });
-                }));
+                d.Mappings(m => m.Properties<ContentChannelItemIndexDocument>(p => p
+                    .DenseVector("vector", dv => dv
+                        .Similarity("cosine")
+                        .Dims(1024)
+                        .Index(true)
+                    )
+
+                    .Text("chunkId", t => t
+                        .Index(true)
+                        .Analyzer("keyword")
+                    )
+                ));
             });
 
             if (!response.IsValidResponse) {
                 throw new Exception("Error creating index");
+            }
+        }
+
+        public void IndexDocument<T>(T document) {
+            if (_client == null) {
+                Connect();
+            }
+
+            if (_client == null) {
+                throw new Exception("Error connecting to Elasticsearch");
+            }
+
+            var response = _client.Index(document, d => d.Index(IndexName));
+
+            if (!response.IsValidResponse) {
+                throw new Exception("Error indexing document");
             }
         }
 
@@ -111,7 +133,7 @@ namespace org.abwe.Chatbots.Stores
                 throw new Exception("Error connecting to Elasticsearch");
             }
 
-            var vector = await _embeddingGenerator.GetEmbedding(query, model: EmbeddingModels.TextEmbedding3Large);
+            var vector = await _embeddingGenerator.GetEmbedding(query, model: Interfaces.OpenAI.EmbeddingModels.TextEmbedding3Large);
 
             if (vector == null) {
                 throw new Exception("Error generating vector");
@@ -140,6 +162,47 @@ namespace org.abwe.Chatbots.Stores
                 .From(0)
                 .Size(10)
                 .Knn(KnnQuery)
+            );
+
+            if (response.IsValidResponse)
+            {
+                return response.Documents;
+            }
+
+            return null;
+        }
+
+        public async Task<IReadOnlyCollection<T>> GetDocuments<T>(List<string> ids)
+        {
+            if (_client == null)
+            {
+                Connect();
+            }
+
+            if (_client == null)
+            {
+                throw new Exception("Error connecting to Elasticsearch");
+            }
+
+            var idQuery = new IdsQuery
+            {
+                Values = new Ids(ids)
+            };
+            
+            var response = await _client.SearchAsync<T>(s => s
+                .Index(IndexName)
+                .From(0)
+                .Query(q => q
+                    .Bool(b => b
+                        .Filter(f => f
+                            .Terms(t => t
+                                .Field("chunkId")
+                                .Terms(new TermsQueryField(ids.Select(id => FieldValue.String(id)).ToArray()))
+                            )
+                        )
+                    )
+                    //.Ids(idq => idq.Values((new Ids(ids))))
+                )
             );
 
             if (response.IsValidResponse)

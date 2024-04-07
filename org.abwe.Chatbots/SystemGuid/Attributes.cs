@@ -13,10 +13,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace org.abwe.Chatbots.Interfaces
+namespace org.abwe.Chatbots.SystemGuid
 {
-    public abstract class IEmbeddingGenerator
+    public class Attributes
     {
-        public abstract Task<List<float>> GetEmbedding(string input, string model = null);
+        public const string ChatbotsIndex = "17f47ade-1ea5-42df-b436-4f4af966fe11";
+        public const string ClaudeAPIKey = "45dd2ad3-197d-4db5-81fa-93e22af08d8a";
     }
 }

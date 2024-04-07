@@ -13,29 +13,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace org.abwe.Chatbots.Interfaces.OpenAI
+namespace org.abwe.Chatbots.Interfaces.Claude
 {
-    public class Choice
+    public class ContentBlockDelta
     {
-        public int Index { get; set; }
-        public Delta Delta { get; set; }
-        public object Logprobs { get; set; }
-        public string FinishReason { get; set; }
-    }
-
-    public class Delta
-    {
-        public string Role { get; set; }
-        public string Content { get; set; }
+        public string type { get; set; }
+        public string text { get; set; }
     }
 
     public class Response
     {
-        public string Id { get; set; }
-        public string Object { get; set; }
-        public long Created { get; set; }
-        public string Model { get; set; }
-        public string SystemFingerprint { get; set; }
-        public List<Choice> Choices { get; set; }
+        public string type { get; set; }
+        public int index { get; set; }
+        public object delta { get; set; }
     }
 }

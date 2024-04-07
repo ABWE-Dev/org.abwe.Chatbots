@@ -17,7 +17,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace org.abwe.Chatbots.Interfaces
+namespace org.abwe.Chatbots.Interfaces.OpenAI
 {
     public static class Models
     {
@@ -40,7 +40,7 @@ namespace org.abwe.Chatbots.Interfaces
         public int index;
     }
 
-    public class OpenAI : IEmbeddingGenerator
+    public class OpenAI : IEmbeddingGenerator, IResponseGenerator
     {
         private string _apiKey;
 
@@ -48,7 +48,7 @@ namespace org.abwe.Chatbots.Interfaces
             _apiKey = apiKey;
         }
 
-        public override async Task<List<float>> GetEmbedding(string input, string model = EmbeddingModels.TextEmbedding3Large)
+        public async Task<List<float>> GetEmbedding(string input, string model = EmbeddingModels.TextEmbedding3Large)
         {
             try {
                 var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/embeddings");

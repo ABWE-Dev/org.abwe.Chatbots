@@ -30,6 +30,7 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
 using System.Text;
 using static Rock.WebFarm.RockWebFarm;
@@ -73,7 +74,7 @@ Question: {{ Input }}
     [ContentChannelsField("Content Channels", "The content channels to search for responses.", false, "", "", 4)]
     [CustomRadioListField("Style", "The style of the chat", "Inline,Popup", true, "Inline", "", 5)]
     [LinkedPage("Content Channel Item Detail Page", "This page will be used as the landing page for source links that are clicked", true, "", "", 6)]
-    [CustomRadioListField("Model", "The OpenAI model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive", "GPT3.5,GPT4,GPT4Turbo", true, "GPT3.5", "", 5)]
+    [CustomRadioListField("Model", "The OpenAI model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku", true, "GPT3.5", "", 5)]
 
     #endregion
 
@@ -91,9 +92,12 @@ Question: {{ Input }}
 
         public class ContentChannelItemIndex
         {
+            public string _id { get; set; }
             public string text { get; set; }
             public List<float> vector { get; set; }
             public ContentChannelItemMetadata metadata { get; set; }
+            public Guid chunkId { get; set; }
+            public Guid? parentChunkId { get; set; }
         }
 
         public override string ObsidianFileUrl => $"/Plugins/org_abwe/Chatbots/Blocks/SupportChat.obs";
@@ -208,62 +212,96 @@ Question: {{ Input }}
                 var history = ChatHistorySession.LoadFromSessionId(sessionId);
                 history.AddMessage(ChatHistoryAgent.User, message);
                 history.Save(this.BlockCache, this.RequestContext);
-
+                
                 var responseToSend = new PushStreamContent(async (stream, content, context) =>
                 {
-                    // Use StreamWriter or similar to write to the stream
-                    using (var writer = new StreamWriter(stream))
-                    {
-                        var model = GetAttributeValue("Model");
-                        var modelToUse = Models.GPT35Turbo;
-                        switch (model) {
-                            case "GPT3.5":
-                                modelToUse = Models.GPT35Turbo;
-                                break;
-                            case "GPT4":
-                                modelToUse = Models.GPT4;
-                                break;
-                            case "GPT4Turbo":
-                                modelToUse = Models.GPT4Turbo;
-                                break;
-                            default:
-                                modelToUse = Models.GPT35Turbo;
-                                break;
-                        }
-                        var openAIKey = Util.GetOpenAIKey();
-                        var openAi = new OpenAI(openAIKey);
-                        var elasticsearch = new Elasticsearch(openAi);
-                        var linkedPage = GetAttributeValue("ContentChannelItemDetailPage");
-                        var docs = await elasticsearch.SearchVector<ContentChannelItemIndex>(message, contentChannelIds);
-                        if (docs != null && docs.Any())
+                    var cancellationToken = context; // CancellationToken for client disconnection
+                    try {
+                        // Use StreamWriter or similar to write to the stream
+                        using (var writer = new StreamWriter(stream))
                         {
-                            var docsAsJson = docs.Select(doc => new {
-                                name = doc.metadata.title,
-                                url = new PageReference(linkedPage, parameters: new Dictionary<string, string>() { { "Item", doc.metadata.id.ToString() } }).BuildUrl(),
-                                id = doc.metadata.id 
-                            }).ToJson();
+                            var model = GetAttributeValue("Model");
+                            var modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
+                            switch (model) {
+                                case "GPT3.5":
+                                    modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
+                                    break;
+                                case "GPT4":
+                                    modelToUse = Interfaces.OpenAI.Models.GPT4;
+                                    break;
+                                case "GPT4Turbo":
+                                    modelToUse = Interfaces.OpenAI.Models.GPT4Turbo;
+                                    break;
+                                case "Claude Haiku":
+                                    modelToUse = Interfaces.Claude.Models.Haiku;
+                                    break;
+                                default:
+                                    modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
+                                    break;
+                            }
+                            var openAIKey = Util.GetOpenAIKey();
+                            var openAi = new Interfaces.OpenAI.OpenAI(openAIKey);
+                            IResponseGenerator llm;
+                            
+                            if (modelToUse == Interfaces.Claude.Models.Haiku) {
+                                var claudeAPIKey = Util.GetClaudeKey();
+                                llm = new Interfaces.Claude.Claude(claudeAPIKey);
+                            } else {
+                                llm = openAi;
+                            }
 
-                            await writer.WriteLineAsync($"data: DESCRIPTOR:{docsAsJson}");
-                            await writer.FlushAsync();
+                            var elasticsearch = new Elasticsearch(openAi);
+                            var linkedPage = GetAttributeValue("ContentChannelItemDetailPage");
+                            var docs = await elasticsearch.SearchVector<ContentChannelItemIndex>(message, contentChannelIds);
+
+                            var fullDocs = docs.Where(d => d.parentChunkId == null).ToList();
+                            var partialDocs = docs.Where(d => d.parentChunkId != null).ToList();
+                            var partialParentIds = partialDocs.Select(d => d.parentChunkId.ToString()).Distinct().ToList();
+                            var partialParents = await elasticsearch.GetDocuments<ContentChannelItemIndex>(partialParentIds);
+                            fullDocs.AddRange(partialParents);
+
+                            if (fullDocs != null && fullDocs.Any())
+                            {
+                                var docsAsJson = fullDocs.Select(doc => new {
+                                    name = doc.metadata.title,
+                                    url = new PageReference(linkedPage, parameters: new Dictionary<string, string>() { { "Item", doc.metadata.id.ToString() } }).BuildUrl(),
+                                    id = doc.metadata.id 
+                                }).ToJson();
+
+                                await writer.WriteLineAsync($"data: DESCRIPTOR:{docsAsJson}");
+                                await writer.FlushAsync();
+                            }
+
+                            var prePrompt = GetPrePrompt(message, history.History.Take(history.History.Count - 1).ToList());
+
+                            var revisedQuestion = await llm.GetResponse(prePrompt, model: modelToUse);
+                            history.AddMessage(ChatHistoryAgent.System, revisedQuestion);
+                            history.Save(this.BlockCache, this.RequestContext);
+
+                            var prompt = GetMainPrompt(revisedQuestion, fullDocs);
+
+                            var text = "";
+                            try
+                            {
+                                await llm.GetResponse(prompt, model: modelToUse, (string output) =>
+                                {
+                                    text += output;
+                                    writer.WriteLine("data: " + JsonConvert.SerializeObject(output));
+                                    writer.Flush();
+                                });
+                            } catch (Exception ex) {
+                                ExceptionLogService.LogException(ex);
+                            } finally {
+                                history.AddMessage(ChatHistoryAgent.Bot, text);
+                                history.Save(this.BlockCache, this.RequestContext);
+
+                                writer.Close();
+                            }
                         }
-
-                        var prePrompt = GetPrePrompt(message, history.History.Take(history.History.Count - 1).ToList());
-
-                        var revisedQuestion = await openAi.GetResponse(prePrompt, model: modelToUse);
-                        history.AddMessage(ChatHistoryAgent.System, revisedQuestion);
-                        history.Save(this.BlockCache, this.RequestContext);
-
-                        var prompt = GetMainPrompt(revisedQuestion, docs);
-
-                        var text = await openAi.GetResponse(prompt, model: modelToUse, (string output) => {
-                            writer.WriteLine("data: " + JsonConvert.SerializeObject(output));
-                            writer.Flush();
-                        });
-
-                        history.AddMessage(ChatHistoryAgent.Bot, text);
-                        history.Save(this.BlockCache, this.RequestContext);
-
-                        writer.Close();
+                    } catch (Exception ex) {
+                        ExceptionLogService.LogException(ex);
+                    } finally {
+                        stream.Close();
                     }
                 }, "text/event-stream"); // Set the appropriate media type
 

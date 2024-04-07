@@ -32,17 +32,18 @@ namespace org.abwe.Chatbots
     [DisplayName("Build ChatBot Index")]
     [Description("This job generates embeddings for content channels used in chat bots and recreates the bot index in Elasticsearch.")]
 
-    [IntegerField("Chunk Size", "The chunk size to use when splitting content into smaller pieces for processing.", false, 1600, "", 0)]
-    [IntegerField("Chunk Overlap", "The number of characters to overlap between chunks.", false, 250, "", 1)]
+    [IntegerField("Chunk Size", "The chunk size to use when splitting content into smaller pieces for processing.", false, 1600, "", 0, AttributeKey.ChunkSize)]
+    [IntegerField("Chunk Overlap", "The number of characters to overlap between chunks.", false, 250, "", 1, AttributeKey.ChunkOverlap)]
+    [IntegerField("Second Pass Chunk Size", "Break content into even smaller chunks for search. The larger chunk above will be passed to the LLM.", false, 100, "", 0, AttributeKey.SecondPassChunkSize)]
 
     [DisallowConcurrentExecution]
     public class BuildChatbotIndex : RockJob
     {
         private class AttributeKey
         {
-            public const string Username = "Username";
-            public const string Password = "Password";
-            public const string Communication = "Communication";
+            public const string ChunkSize = "ChunkSize";
+            public const string ChunkOverlap = "ChunkOverlap";
+            public const string SecondPassChunkSize = "SecondPassChunkSize";
         }
 
         /// <summary>
@@ -61,12 +62,13 @@ namespace org.abwe.Chatbots
         /// <param name="chunkSize">The number of characters to use as the chunk size for the content channel item</param>
         /// <param name="chunkOverlap">The number of characters to overlap each chunk</param>
         /// <returns>List of index documents representing the chunks of the content channel item.</returns>
-        public List<ContentChannelItemIndexDocument> CreateChunksFromItem(ContentChannelItem item, int chunkSize, int chunkOverlap)
+        public List<ContentChannelItemIndexDocument> CreateChunksFromItem(ContentChannelItem item, int chunkSize, int chunkOverlap, int secondaryChunkSize = 0)
         {
             var textSplitter = new RecursiveTextSplitter(true, chunkSize, chunkOverlap);
             var chunks = textSplitter.SplitText(String.Concat(item.Title, item.Content), RecursiveTextSplitter.HtmlSeparators, true);
-            return chunks.Select((chunk, index) => new ContentChannelItemIndexDocument {
+            var chunkedItems = chunks.Select((chunk, index) => new ContentChannelItemIndexDocument {
                 Text = chunk,
+                ChunkId = Guid.NewGuid(),
                 Metadata = new ContentChannelItemIndexDocumentMetadata {
                     ContentChannelId = item.ContentChannelId,
                     id = item.Guid,
@@ -75,6 +77,29 @@ namespace org.abwe.Chatbots
                 },
                 Vector = null
             }).ToList();
+
+            if (secondaryChunkSize > 0) {
+                // Chunk the chunks into smaller chunks
+                var secondaryChunks = new List<ContentChannelItemIndexDocument>();
+                var secondaryTextSplitter = new RecursiveTextSplitter(true, secondaryChunkSize, 0);
+                foreach (var chunk in chunkedItems)
+                {
+                    if (chunk.Text.Length > secondaryChunkSize) {
+                        var secondaryChunksForItem = secondaryTextSplitter.SplitText(chunk.Text, RecursiveTextSplitter.HtmlSeparators, true);
+                        secondaryChunks.AddRange(secondaryChunksForItem.Select((secondaryChunk, index) => new ContentChannelItemIndexDocument {
+                            Text = secondaryChunk,
+                            Metadata = chunk.Metadata,
+                            Vector = null,
+                            ChunkId = Guid.NewGuid(),
+                            ParentChunkId = chunk.ChunkId
+                        }));
+                    }
+                }
+
+                chunkedItems.AddRange(secondaryChunks);
+            }
+
+            return chunkedItems;
         }
 
         /// <summary>
@@ -125,29 +150,30 @@ namespace org.abwe.Chatbots
 
 
                     var openAIKey = Util.GetOpenAIKey();
-                    var openAi = new OpenAI(openAIKey);
+                    var openAi = new Interfaces.OpenAI.OpenAI(openAIKey);
                     var elasticsearch = new Elasticsearch(openAi);
 
                     // Split content into chunks
-                    var chunkSize = GetAttributeValue("ChunkSize").AsInteger();
-                    var chunkOverlap = GetAttributeValue("ChunkOverlap").AsInteger();
+                    var chunkSize = GetAttributeValue(AttributeKey.ChunkSize).AsInteger();
+                    var secondaryChunkSize = GetAttributeValue(AttributeKey.SecondPassChunkSize).AsInteger();
+                    var chunkOverlap = GetAttributeValue(AttributeKey.ChunkOverlap).AsInteger();
                     var chunks = new List<ContentChannelItemIndexDocument>();
                     foreach (var item in contentChannelItems)
                     {
-                        chunks.AddRange(CreateChunksFromItem(item, chunkSize, chunkOverlap));
+                        chunks.AddRange(CreateChunksFromItem(item, chunkSize, chunkOverlap, secondaryChunkSize));
                     }
 
+                    // Drop and rebuild index
+                    elasticsearch.RecreateIndex();
+
                     // Use parallel requests to speed things up
-                    ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = 10 };
+                    ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 };
 
                     Parallel.ForEach(chunks, options, chunk =>
                     {
                         chunk.Vector = openAi.GetEmbedding(chunk.Text).Result;
+                        elasticsearch.IndexDocument(chunk);
                     });
-
-                    // Drop and rebuild index
-                    elasticsearch.RecreateIndex();
-                    elasticsearch.IndexDocuments(chunks);
                 }
             }
             }
