@@ -117,11 +117,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Blocks\ChatbotConfigurationBlock.cs" />
     <Compile Include="Blocks\SupportChat.cs" />
+    <Compile Include="ChatbotConfiguration.cs" />
+    <Compile Include="EntityUpdatedConsumer.cs" />
+    <Compile Include="ContentChannelIndexComponent.cs" />
     <Compile Include="Interfaces\Claude.cs" />
     <Compile Include="Interfaces\Claude\Response.cs" />
     <Compile Include="Interfaces\IResponseGenerator.cs" />
     <Compile Include="Jobs\BuiltChatBotIndex.cs" />
+    <Compile Include="Migration\002_Configuration.cs" />
     <Compile Include="Migration\001_GlobalAttribute.cs" />
     <Compile Include="Model\ChatHistory.cs" />
     <Compile Include="Model\ContentChannelItemIndexDocument.cs" />
@@ -139,7 +144,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <Fakes Include="Fakes\System.Text.Json.fakes" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

@@ -7,9 +7,11 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 // SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+using Newtonsoft.Json;
 using Rock;
 using Rock.Data;
 using Rock.Model;
+using Rock.Web;
 using Rock.Web.Cache;
 using System;
 using System.Collections.Generic;
@@ -32,6 +34,27 @@ namespace org.abwe.Chatbots
         public static string GetClaudeKey()
         {
             return GlobalAttributesCache.Get().GetValue("ClaudeAPIKey");
+        }
+
+        public static ChatbotConfiguration GetConfiguration() {
+            ChatbotConfiguration chatbotConfiguration = null;
+            try
+            {
+                chatbotConfiguration = JsonConvert.DeserializeObject<ChatbotConfiguration>(SystemSettings.GetValue("org_abwe_Chatbot_Configuration"));
+            }
+            catch (Exception)
+            {
+            }
+
+            if (chatbotConfiguration == null) {
+                chatbotConfiguration = new ChatbotConfiguration();
+                chatbotConfiguration.IndexName = "org_abwe_chatbot";
+                chatbotConfiguration.ChunkSize = 1600;
+                chatbotConfiguration.ChunkOverlap = 250;
+                chatbotConfiguration.SecondPassChunkSize = 100;
+            }
+
+            return chatbotConfiguration;
         }
     }
 }

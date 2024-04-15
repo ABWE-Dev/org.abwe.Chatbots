@@ -37,7 +37,8 @@ namespace org.abwe.Chatbots.Stores
             _embeddingGenerator = embeddingGenerator;
         }
 
-        public void Connect() {
+        public void Connect()
+        {
             var avService = new AttributeValueService(new RockContext());
             var ElasticSearchComponentId = "97DACCE9-F397-4E7B-9596-783A233FCFCF".AsGuid();
             var nodeUrl = avService.Queryable().Where(av => av.Attribute.Key == "NodeURL" && av.Attribute.EntityType.Guid == ElasticSearchComponentId).FirstOrDefault();
@@ -54,12 +55,15 @@ namespace org.abwe.Chatbots.Stores
             IndexName = GlobalAttributesCache.Get().GetValue(IndexAttributeKey).IfEmpty("org_abwe_chatbots");
         }
 
-        public void RecreateIndex() {
-            if (_client == null) {
+        public void RecreateIndex()
+        {
+            if (_client == null)
+            {
                 Connect();
             }
 
-            if (_client == null) {
+            if (_client == null)
+            {
                 throw new Exception("Error connecting to Elasticsearch");
             }
 
@@ -84,58 +88,76 @@ namespace org.abwe.Chatbots.Stores
                         .Index(true)
                         .Analyzer("keyword")
                     )
+
+                    .Text("metadata.id", t => t
+                        .Index(true)
+                        .Analyzer("keyword")
+                    )
                 ));
             });
 
-            if (!response.IsValidResponse) {
+            if (!response.IsValidResponse)
+            {
                 throw new Exception("Error creating index");
             }
         }
 
-        public void IndexDocument<T>(T document) {
-            if (_client == null) {
+        public void IndexDocument<T>(T document)
+        {
+            if (_client == null)
+            {
                 Connect();
             }
 
-            if (_client == null) {
+            if (_client == null)
+            {
                 throw new Exception("Error connecting to Elasticsearch");
             }
 
             var response = _client.Index(document, d => d.Index(IndexName));
 
-            if (!response.IsValidResponse) {
+            if (!response.IsValidResponse)
+            {
                 throw new Exception("Error indexing document");
             }
         }
 
-        public void IndexDocuments<T>(List<T> documents) {
-            if (_client == null) {
+        public void IndexDocuments<T>(List<T> documents)
+        {
+            if (_client == null)
+            {
                 Connect();
             }
 
-            if (_client == null) {
+            if (_client == null)
+            {
                 throw new Exception("Error connecting to Elasticsearch");
             }
 
             var response = _client.Bulk(b => b.Index(IndexName).IndexMany(documents));
 
-            if (!response.IsValidResponse) {
+            if (!response.IsValidResponse)
+            {
                 throw new Exception("Error indexing documents");
             }
         }
 
-        public async Task<IReadOnlyCollection<T>> SearchVector<T>(string query, List<int> channelIds = null) {
-            if (_client == null) {
+        public async Task<IReadOnlyCollection<T>> SearchVector<T>(string query, List<int> channelIds = null)
+        {
+            if (_client == null)
+            {
                 Connect();
             }
 
-            if (_client == null) {
+            if (_client == null)
+            {
                 throw new Exception("Error connecting to Elasticsearch");
             }
 
             var vector = await _embeddingGenerator.GetEmbedding(query, model: Interfaces.OpenAI.EmbeddingModels.TextEmbedding3Large);
 
-            if (vector == null) {
+            if (vector == null)
+            {
                 throw new Exception("Error generating vector");
             }
 
@@ -147,7 +169,8 @@ namespace org.abwe.Chatbots.Stores
                 QueryVector = vector
             } };
 
-            if (channelIds != null) {
+            if (channelIds != null)
+            {
                 KnnQuery[0].Filter = new List<Query>() {
                     Query.Terms(new TermsQuery
                     {
@@ -172,6 +195,39 @@ namespace org.abwe.Chatbots.Stores
             return null;
         }
 
+        public async Task<bool> RemoveContentChannelItemChunks(Guid? contentChannelItemGuid)
+        {
+            if (_client == null)
+            {
+                Connect();
+            }
+
+            if (_client == null)
+            {
+                throw new Exception("Error connecting to Elasticsearch");
+            }
+
+            var response = await _client.DeleteByQueryAsync(IndexName, d => d
+                .Query(q => q
+                    .Bool(b => b
+                        .Filter(f => f
+                            .Term(t => t
+                                .Field("metadata.id")
+                                .Value(contentChannelItemGuid.Value.ToString())
+                            )
+                        )
+                    )
+                )
+            );
+
+            if (response.IsValidResponse)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public async Task<IReadOnlyCollection<T>> GetDocuments<T>(List<string> ids)
         {
             if (_client == null)
@@ -184,11 +240,6 @@ namespace org.abwe.Chatbots.Stores
                 throw new Exception("Error connecting to Elasticsearch");
             }
 
-            var idQuery = new IdsQuery
-            {
-                Values = new Ids(ids)
-            };
-            
             var response = await _client.SearchAsync<T>(s => s
                 .Index(IndexName)
                 .From(0)
@@ -201,7 +252,6 @@ namespace org.abwe.Chatbots.Stores
                             )
                         )
                     )
-                    //.Ids(idq => idq.Values((new Ids(ids))))
                 )
             );
 

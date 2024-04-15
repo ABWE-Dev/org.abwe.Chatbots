@@ -367,19 +367,6 @@ a.response.article i {
                     message: message,
                     sessionId: sessionId
                 }),
-                // body: JSON.stringify({
-                //     message: JSON.stringify({
-                //         input: {
-                //             question: message,
-                //             chat_history: conversationHistory.value.slice(0, -1).map((message) => {
-                //                 return {
-                //                     content: message.content,
-                //                     type: message.type
-                //                 }
-                //             })
-                //         }
-                //     })
-                // }),
                 signal: abortController.signal
             });
 

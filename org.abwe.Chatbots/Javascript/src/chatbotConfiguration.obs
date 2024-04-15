@@ -1,0 +1,80 @@
+<style scoped></style>
+
+<template>
+    <Panel
+           title="Chatbot Configuration">
+
+        <template v-if="configuration">
+            <div class="alert alert-success" v-if="saveFailed === false">Configuration saved</div>
+            <div class="alert alert-danger" v-if="saveFailed === true">Configuration save failed</div>
+
+            <TextBox
+                     label="Index Name"
+                     v-model="configuration.indexName" />
+
+            <NumberBox
+                       label="Chunk Size"
+                       v-model="configuration.chunkSize" />
+
+            <NumberBox
+                       label="Chunk Overlap"
+                       v-model="configuration.chunkOverlap" />
+
+            <NumberBox
+                       label="Second Pass Chunk Size"
+                       v-model="configuration.secondPassChunkSize" />
+
+            <Button
+                @click="saveData()"
+                class="pull-right"
+                :btnType="BtnType.Primary">
+                Save
+            </Button>
+        </template>
+    </Panel>
+</template>
+
+<script setup lang="ts">
+    import Panel from '@Obsidian/Controls/panel.obs';
+    import TextBox from '@Obsidian/Controls/textBox.obs';
+    import NumberBox from '@Obsidian/Controls/numberBox.obs';
+    import Button from '@Obsidian/Controls/rockButton.obs';
+    import { ChatbotConfiguration } from './ChatbotConfiguration.d';
+    import { ref } from 'vue';
+    import { useInvokeBlockAction } from '@Obsidian/Utility/block';
+    import { BtnType } from "@Obsidian/Enums/Controls/btnType";
+
+    const configuration = ref<ChatbotConfiguration | null>(null);
+    const saveFailed = ref<boolean | undefined>();
+    const invokeBlockAction = useInvokeBlockAction();
+
+    async function saveData() {
+        saveFailed.value = undefined;
+
+        const result = await invokeBlockAction<ChatbotConfiguration>("SaveConfiguration", { configuration: configuration.value });
+        if (result?.isSuccess && result.data !== null) {
+            configuration.value = result.data;
+            saveFailed.value = false;
+        }
+        else {
+            saveFailed.value = true;
+        }
+    }
+
+    async function loadData() {
+        try {
+            const result = await invokeBlockAction<ChatbotConfiguration>("GetConfiguration");
+
+            if (result?.isSuccess && result.data !== null) {
+                configuration.value = result.data;
+            }
+            else {
+                return null;
+            }
+        } finally {
+        }
+    }
+
+    loadData();
+</script>
+
