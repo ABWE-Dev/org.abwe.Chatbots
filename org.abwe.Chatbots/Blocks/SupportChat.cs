@@ -339,10 +339,19 @@ Question: {{ Input }}
                                     break;
                             }
 
+                            // We get the pre-prompt response first, and use that for the Elasticsearch search
+                            var prePrompt = GetPrePrompt(message, history.History.Take(history.History.Count - 1).ToList());
+
+                            var revisedQuestion = await prepromptLLM.GetResponse(prePrompt, model: prePromptModelToUse);
+                            history.AddMessage(ChatHistoryAgent.System, revisedQuestion);
+                            history.Save(this.BlockCache, this.RequestContext);
+
                             var configuration = Util.GetConfiguration();
+
+                            // Find matching documents
                             var elasticsearch = new Elasticsearch(openAi, configuration.IndexName);
                             var linkedPage = GetAttributeValue("ContentChannelItemDetailPage");
-                            var docs = await elasticsearch.SearchVector<ContentChannelItemIndex>(message, contentChannelIds);
+                            var docs = await elasticsearch.SearchVector<ContentChannelItemIndex>(revisedQuestion, contentChannelIds);
 
                             // If we're using two-pass chunks, we need to get the larger chunks
                             // to pass to the LLM as it will have more context.
@@ -366,13 +375,6 @@ Question: {{ Input }}
                                 await writer.WriteLineAsync($"data: DESCRIPTOR:{docsAsJson.ToJson()}");
                                 await writer.FlushAsync();
                             }
-
-
-                            var prePrompt = GetPrePrompt(message, history.History.Take(history.History.Count - 1).ToList());
-
-                            var revisedQuestion = await prepromptLLM.GetResponse(prePrompt, model: prePromptModelToUse);
-                            history.AddMessage(ChatHistoryAgent.System, revisedQuestion);
-                            history.Save(this.BlockCache, this.RequestContext);
 
                             var prompt = GetMainPrompt(revisedQuestion, fullDocs);
 
