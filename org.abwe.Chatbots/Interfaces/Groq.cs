@@ -17,24 +17,22 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace org.abwe.Chatbots.Interfaces.Claude
+namespace org.abwe.Chatbots.Interfaces.Groq
 {
     public static class Models
     {
-        public const string Sonnet = "claude-3-5-sonnet-20240620";
-        public const string Haiku = "claude-3-haiku-20240307";
-        public const string Opus = "claude-3-opus-20240229";
+        public const string Llama3 = "llama3-70b-8192";
     }
 
-    public class Claude : IResponseGenerator
+    public class Groq : IResponseGenerator
     {
         private string _apiKey;
 
-        public Claude(string apiKey) {
+        public Groq(string apiKey) {
             _apiKey = apiKey;
         }
 
-        public async Task<string> GetResponse(string input, string model = Models.Haiku, Action<string> handle = null)
+        public async Task<string> GetResponse(string input, string model = Models.Llama3, Action<string> handle = null)
         {
             var jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(new
             {
@@ -46,13 +44,10 @@ namespace org.abwe.Chatbots.Interfaces.Claude
                     }
                 },
                 temperature = 0,
-                stream = true,
-                max_tokens = 2000,
+                stream = true
             });
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages");
-            request.Headers.Add("x-api-key", $"{_apiKey}");
-            request.Headers.Add("anthropic-version", "2023-06-01");
-            //request.Headers.Add("content-type", "application/json");
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions");
+            request.Headers.Add("Authorization", $"Bearer {_apiKey}");
             request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
             var textResponse = "";
@@ -72,15 +67,20 @@ namespace org.abwe.Chatbots.Interfaces.Claude
                             var line = reader.ReadLine();
                             if (line.StartsWith("data: ") && line != "data: [DONE]")
                             {
-                                Response responseObj = Newtonsoft.Json.JsonConvert.DeserializeObject<Response>(line.Substring(6));
+                                OpenAI.Response responseObj = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenAI.Response>(line.Substring(6));
 
-                                if (responseObj.type == "content_block_delta") {
-                                    textResponse += ((Newtonsoft.Json.Linq.JObject)responseObj.delta).GetValue("text");
-                                    if (handle != null) {
-                                        handle(((Newtonsoft.Json.Linq.JObject)responseObj.delta).GetValue("text").ToString());
-                                    }
+                                textResponse += responseObj.Choices[0].Delta.Content;
+                                if (handle != null) {
+                                    handle(responseObj.Choices[0].Delta.Content);
                                 }
                             }
+                            //else
+                            //{
+                            //    if (line != "data: [DONE]")
+                            //    {
+                            //        Console.Write(line);
+                            //    }
+                            //}
                         }
                 }
 

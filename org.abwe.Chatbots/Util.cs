@@ -31,6 +31,11 @@ namespace org.abwe.Chatbots
             return attributeValue.Value;
         }
 
+        public static string GetGroqKey()
+        {
+            return GlobalAttributesCache.Get().GetValue("GroqAPIKey");
+        }
+
         public static string GetClaudeKey()
         {
             return GlobalAttributesCache.Get().GetValue("ClaudeAPIKey");

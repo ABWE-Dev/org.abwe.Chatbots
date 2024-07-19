@@ -32,9 +32,10 @@ namespace org.abwe.Chatbots.Stores
         private string IndexName = "org_abwe_chatbots";
         private static string IndexAttributeKey = "AbweChatbotIndex";
 
-        public Elasticsearch(IEmbeddingGenerator embeddingGenerator)
+        public Elasticsearch(IEmbeddingGenerator embeddingGenerator, string IndexName)
         {
             _embeddingGenerator = embeddingGenerator;
+            this.IndexName = IndexName;
         }
 
         public void Connect()
@@ -52,7 +53,6 @@ namespace org.abwe.Chatbots.Stores
                 .EnableDebugMode();
 
             _client = new ElasticsearchClient(settings);
-            IndexName = GlobalAttributesCache.Get().GetValue(IndexAttributeKey).IfEmpty("org_abwe_chatbots");
         }
 
         public void RecreateIndex()
@@ -214,6 +214,39 @@ namespace org.abwe.Chatbots.Stores
                             .Term(t => t
                                 .Field("metadata.id")
                                 .Value(contentChannelItemGuid.Value.ToString())
+                            )
+                        )
+                    )
+                )
+            );
+
+            if (response.IsValidResponse)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public async Task<bool> RemoveContentChannelChunks(int? contentChannelId)
+        {
+            if (_client == null)
+            {
+                Connect();
+            }
+
+            if (_client == null)
+            {
+                throw new Exception("Error connecting to Elasticsearch");
+            }
+
+            var response = await _client.DeleteByQueryAsync(IndexName, d => d
+                .Query(q => q
+                    .Bool(b => b
+                        .Filter(f => f
+                            .Term(t => t
+                                .Field("metadata.contentChannelId")
+                                .Value(FieldValue.Long(contentChannelId.Value))
                             )
                         )
                     )

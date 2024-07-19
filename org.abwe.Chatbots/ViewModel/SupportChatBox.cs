@@ -12,5 +12,7 @@ namespace org.abwe.Chatbots.Blocks
     public class SupportChatBox
     {
         public string Style { get; set; }
+        public string ConversationStarter { get; set; }
+        public string BotName { get; set; }
     }
 }

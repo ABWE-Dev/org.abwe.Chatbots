@@ -200,14 +200,12 @@ a.response.article i {
                 </div>
                 <div class="history" ref="historyRef">
                     <div class="response-header">
-                        <i class="fa fa-robot"></i> ABWE Bot
+                        <i class="fa fa-robot"></i> {{ config.botName || 'Support Bot' }}
                     </div>
-                    <div class="response bot">
-                        What can I help you with? You can ask questions like, "How do I submit an expense report?", "What is ABWE's stance on language learning?", or "What are my current benefits with ABWE?"
-                    </div>
+                    <div class="response bot" v-html="config.conversationStarter || 'Hi there. What can I help you with?'"></div>
                     <template v-for="(message, index) in conversationHistory" :key="index">
                         <div class="response-header bot" v-if="message.type == 'bot'">
-                            <i class="fa fa-robot"></i> ABWE Bot
+                            <i class="fa fa-robot"></i> {{ config.botName || 'Support Bot' }}
                         </div>
                         <div class="response-header human" v-if="message.type == 'human'">
                             <i class="fa fa-user"></i> You

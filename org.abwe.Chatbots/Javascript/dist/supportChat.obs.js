@@ -1,6 +1,6 @@
 System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsidian/Utility/guid', 'https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js'], (function (exports) {
   'use strict';
-  var createTextVNode, defineComponent, ref, onMounted, onUnmounted, openBlock, createElementBlock, normalizeClass, createVNode, Transition, withCtx, createElementVNode, createCommentVNode, Fragment, renderList, toDisplayString, withDirectives, withKeys, vModelText, pushScopeId, popScopeId, nextTick, useStore, useInvokeBlockAction, useConfigurationValues, useBlockGuid, newGuid;
+  var createTextVNode, defineComponent, ref, onMounted, onUnmounted, openBlock, createElementBlock, normalizeClass, createVNode, Transition, withCtx, createElementVNode, createCommentVNode, toDisplayString, unref, Fragment, renderList, withDirectives, withKeys, vModelText, pushScopeId, popScopeId, nextTick, useStore, useInvokeBlockAction, useConfigurationValues, useBlockGuid, newGuid;
   return {
     setters: [function (module) {
       createTextVNode = module.createTextVNode;
@@ -16,9 +16,10 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
       withCtx = module.withCtx;
       createElementVNode = module.createElementVNode;
       createCommentVNode = module.createCommentVNode;
+      toDisplayString = module.toDisplayString;
+      unref = module.unref;
       Fragment = module.Fragment;
       renderList = module.renderList;
-      toDisplayString = module.toDisplayString;
       withDirectives = module.withDirectives;
       withKeys = module.withKeys;
       vModelText = module.vModelText;
@@ -90,67 +91,64 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
       }, [createElementVNode("i", {
         class: "fa fa-exclamation-triangle pull-left mr-3 text-muted"
       }), createTextVNode(" Computer generated responses may not be accurate. Please refer to the policies for more information. ")], -1));
-      var _hoisted_7 = _withScopeId(() => createElementVNode("div", {
+      var _hoisted_7 = {
         class: "response-header"
-      }, [createElementVNode("i", {
+      };
+      var _hoisted_8 = _withScopeId(() => createElementVNode("i", {
         class: "fa fa-robot"
-      }), createTextVNode(" ABWE Bot ")], -1));
-      var _hoisted_8 = _withScopeId(() => createElementVNode("div", {
-        class: "response bot"
-      }, " What can I help you with? You can ask questions like, \"How do I submit an expense report?\", \"What is ABWE's stance on language learning?\", or \"What are my current benefits with ABWE?\" ", -1));
-      var _hoisted_9 = {
+      }, null, -1));
+      var _hoisted_9 = ["innerHTML"];
+      var _hoisted_10 = {
         key: 0,
         class: "response-header bot"
       };
-      var _hoisted_10 = _withScopeId(() => createElementVNode("i", {
+      var _hoisted_11 = _withScopeId(() => createElementVNode("i", {
         class: "fa fa-robot"
       }, null, -1));
-      var _hoisted_11 = createTextVNode(" ABWE Bot ");
-      var _hoisted_12 = [_hoisted_10, _hoisted_11];
-      var _hoisted_13 = {
+      var _hoisted_12 = {
         key: 1,
         class: "response-header human"
       };
-      var _hoisted_14 = _withScopeId(() => createElementVNode("i", {
+      var _hoisted_13 = _withScopeId(() => createElementVNode("i", {
         class: "fa fa-user"
       }, null, -1));
-      var _hoisted_15 = createTextVNode(" You ");
-      var _hoisted_16 = [_hoisted_14, _hoisted_15];
-      var _hoisted_17 = createTextVNode(" Here are some resources that might help:");
-      var _hoisted_18 = _withScopeId(() => createElementVNode("br", null, null, -1));
-      var _hoisted_19 = ["href"];
-      var _hoisted_20 = ["innerHTML"];
-      var _hoisted_21 = _withScopeId(() => createElementVNode("div", {
+      var _hoisted_14 = createTextVNode(" You ");
+      var _hoisted_15 = [_hoisted_13, _hoisted_14];
+      var _hoisted_16 = createTextVNode(" Here are some resources that might help:");
+      var _hoisted_17 = _withScopeId(() => createElementVNode("br", null, null, -1));
+      var _hoisted_18 = ["href"];
+      var _hoisted_19 = ["innerHTML"];
+      var _hoisted_20 = _withScopeId(() => createElementVNode("div", {
         class: "typing-indicator"
       }, [createElementVNode("span"), createElementVNode("span"), createElementVNode("span")], -1));
-      var _hoisted_22 = [_hoisted_21];
-      var _hoisted_23 = {
+      var _hoisted_21 = [_hoisted_20];
+      var _hoisted_22 = {
         key: 0,
         class: "response bot"
       };
-      var _hoisted_24 = {
+      var _hoisted_23 = {
         class: "input"
       };
-      var _hoisted_25 = {
+      var _hoisted_24 = {
         class: "input-group"
       };
-      var _hoisted_26 = ["onKeyup"];
-      var _hoisted_27 = {
+      var _hoisted_25 = ["onKeyup"];
+      var _hoisted_26 = {
         class: "input-group-btn"
       };
-      var _hoisted_28 = _withScopeId(() => createElementVNode("i", {
+      var _hoisted_27 = _withScopeId(() => createElementVNode("i", {
         class: "fal fa-paper-plane"
       }, null, -1));
-      var _hoisted_29 = [_hoisted_28];
-      var _hoisted_30 = _withScopeId(() => createElementVNode("i", {
+      var _hoisted_28 = [_hoisted_27];
+      var _hoisted_29 = _withScopeId(() => createElementVNode("i", {
         class: "fa fa-square"
       }, null, -1));
-      var _hoisted_31 = [_hoisted_30];
-      var _hoisted_32 = {
+      var _hoisted_30 = [_hoisted_29];
+      var _hoisted_31 = {
         key: 0,
         class: "fas fa-comment"
       };
-      var _hoisted_33 = {
+      var _hoisted_32 = {
         key: 1,
         class: "fas fa-times"
       };
@@ -305,31 +303,34 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
                 class: "history",
                 ref_key: "historyRef",
                 ref: historyRef
-              }, [_hoisted_7, _hoisted_8, (openBlock(true), createElementBlock(Fragment, null, renderList(conversationHistory.value, (message, index) => {
+              }, [createElementVNode("div", _hoisted_7, [_hoisted_8, createTextVNode(" " + toDisplayString(unref(config).botName || 'Support Bot'), 1)]), createElementVNode("div", {
+                class: "response bot",
+                innerHTML: unref(config).conversationStarter || 'Hi there. What can I help you with?'
+              }, null, 8, _hoisted_9), (openBlock(true), createElementBlock(Fragment, null, renderList(conversationHistory.value, (message, index) => {
                 return openBlock(), createElementBlock(Fragment, {
                   key: index
-                }, [message.type == 'bot' ? (openBlock(), createElementBlock("div", _hoisted_9, _hoisted_12)) : createCommentVNode("v-if", true), message.type == 'human' ? (openBlock(), createElementBlock("div", _hoisted_13, _hoisted_16)) : createCommentVNode("v-if", true), message.sources ? (openBlock(), createElementBlock("div", {
+                }, [message.type == 'bot' ? (openBlock(), createElementBlock("div", _hoisted_10, [_hoisted_11, createTextVNode(" " + toDisplayString(unref(config).botName || 'Support Bot'), 1)])) : createCommentVNode("v-if", true), message.type == 'human' ? (openBlock(), createElementBlock("div", _hoisted_12, _hoisted_15)) : createCommentVNode("v-if", true), message.sources ? (openBlock(), createElementBlock("div", {
                   key: 2,
                   class: normalizeClass(['response', message.type])
-                }, [_hoisted_17, _hoisted_18, createElementVNode("ul", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(message.sources, source => {
+                }, [_hoisted_16, _hoisted_17, createElementVNode("ul", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(message.sources, source => {
                   return openBlock(), createElementBlock("li", null, [createElementVNode("a", {
                     href: source.url,
                     target: "_blank"
-                  }, toDisplayString(source.name), 9, _hoisted_19)]);
+                  }, toDisplayString(source.name), 9, _hoisted_18)]);
                 }), 256))])], 2)) : createCommentVNode("v-if", true), createCommentVNode(" <a v-if=\"message.sources\" v-for=\"source in message.sources\" :href=\"source.url\" :class=\"['response', 'article', message.type]\">\r\n                            <i class=\"fal fa-file-alt fa-2x mr-3\"></i>\r\n                            {{ source.name }}\r\n                        </a> "), message.content ? (openBlock(), createElementBlock("div", {
                   key: 3,
                   class: normalizeClass(['response', message.type]),
                   innerHTML: markdownToHtml(message.content)
-                }, null, 10, _hoisted_20)) : createCommentVNode("v-if", true), !message.content ? (openBlock(), createElementBlock("div", {
+                }, null, 10, _hoisted_19)) : createCommentVNode("v-if", true), !message.content ? (openBlock(), createElementBlock("div", {
                   key: 4,
                   class: normalizeClass(['response', message.type])
-                }, _hoisted_22, 2)) : createCommentVNode("v-if", true)], 64);
-              }), 128)), error.value ? (openBlock(), createElementBlock("div", _hoisted_23, toDisplayString(error.value), 1)) : createCommentVNode("v-if", true), createCommentVNode(" <button class=\"btn btn-danger btn-link stop-button\" v-if=\"responding\" @click=\"abortFetch\"><i class=\"fa fa-square\"></i> Stop</button> ")], 512), createElementVNode("div", _hoisted_24, [createElementVNode("div", _hoisted_25, [withDirectives(createElementVNode("input", {
+                }, _hoisted_21, 2)) : createCommentVNode("v-if", true)], 64);
+              }), 128)), error.value ? (openBlock(), createElementBlock("div", _hoisted_22, toDisplayString(error.value), 1)) : createCommentVNode("v-if", true), createCommentVNode(" <button class=\"btn btn-danger btn-link stop-button\" v-if=\"responding\" @click=\"abortFetch\"><i class=\"fa fa-square\"></i> Stop</button> ")], 512), createElementVNode("div", _hoisted_23, [createElementVNode("div", _hoisted_24, [withDirectives(createElementVNode("input", {
                 class: "form-control",
                 placeholder: "Ask a question...",
                 "onUpdate:modelValue": _cache[0] || (_cache[0] = $event => currentMessage.value = $event),
                 onKeyup: withKeys(sendMessage, ["enter"])
-              }, null, 40, _hoisted_26), [[vModelText, currentMessage.value]]), createElementVNode("span", _hoisted_27, [!responding.value ? (openBlock(), createElementBlock("button", {
+              }, null, 40, _hoisted_25), [[vModelText, currentMessage.value]]), createElementVNode("span", _hoisted_26, [!responding.value ? (openBlock(), createElementBlock("button", {
                 key: 0,
                 class: "btn btn-default text-muted",
                 type: "button",
@@ -337,7 +338,7 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
                 style: {
                   "border-left": "0"
                 }
-              }, _hoisted_29)) : createCommentVNode("v-if", true), responding.value ? (openBlock(), createElementBlock("button", {
+              }, _hoisted_28)) : createCommentVNode("v-if", true), responding.value ? (openBlock(), createElementBlock("button", {
                 key: 1,
                 class: "btn btn-default text-muted",
                 type: "button",
@@ -345,13 +346,13 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
                 style: {
                   "border-left": "0"
                 }
-              }, _hoisted_31)) : createCommentVNode("v-if", true)])]), createCommentVNode(" /input-group ")])])) : createCommentVNode("v-if", true)]),
+              }, _hoisted_30)) : createCommentVNode("v-if", true)])]), createCommentVNode(" /input-group ")])])) : createCommentVNode("v-if", true)]),
               _: 1
             }), floating.value ? (openBlock(), createElementBlock("div", {
               key: 0,
               class: "btn btn-primary open-chat",
               onClick: _cache[1] || (_cache[1] = $event => chatPanelVisible.value = !chatPanelVisible.value)
-            }, [!chatPanelVisible.value ? (openBlock(), createElementBlock("i", _hoisted_32)) : (openBlock(), createElementBlock("i", _hoisted_33))])) : createCommentVNode("v-if", true)], 2);
+            }, [!chatPanelVisible.value ? (openBlock(), createElementBlock("i", _hoisted_31)) : (openBlock(), createElementBlock("i", _hoisted_32))])) : createCommentVNode("v-if", true)], 2);
           };
         }
       }));

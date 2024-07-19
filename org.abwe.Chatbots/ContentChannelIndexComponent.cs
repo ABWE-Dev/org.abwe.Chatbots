@@ -69,39 +69,37 @@ namespace org.abwe.Chatbots
         }
 
         public void DeleteDocument(int ContentChannelItemId) {
+            var configuration = Util.GetConfiguration();
             var rockContext = new RockContext();
-            var elasticsearch = new Elasticsearch(null);
+            var elasticsearch = new Elasticsearch(null, configuration.IndexName);
 
             var item = new ContentChannelItemService(rockContext).Get(ContentChannelItemId);
             elasticsearch.RemoveContentChannelItemChunks(item.Guid).Wait();
         }
 
-        public void IndexDocument(int ContentChannelItemId, bool removePrevious = true) {
-            // Drop and rebuild index
-            var rockContext = new RockContext();
-
-            // Get the content channel item
-            var item = new ContentChannelItemService(rockContext).Get(ContentChannelItemId);
-
+        public void ExecuteIndexRequest(RockContext context, ContentChannelItem item, bool removePrevious = true) 
+        {
             // Get all content channels that are used in chatbots
-            var contentChannelGuids = GetContentChannelsUsedInChatbots(rockContext);
+            var contentChannelGuids = GetContentChannelsUsedInChatbots(context);
 
             // If this item is not in a content channel used by a chatbot,
             // we don't need to index it
-            if (!contentChannelGuids.Any(channelGuid => channelGuid == item.ContentChannel.Guid)) {
+            if (!contentChannelGuids.Any(channelGuid => channelGuid == item.ContentChannel.Guid))
+            {
                 return;
             }
 
+            var configuration = Util.GetConfiguration();
             var openAIKey = Util.GetOpenAIKey();
             var openAi = new Interfaces.OpenAI.OpenAI(openAIKey);
-            var elasticsearch = new Elasticsearch(openAi);
+            var elasticsearch = new Elasticsearch(openAi, configuration.IndexName);
 
-            if (removePrevious) {
+            if (removePrevious)
+            {
                 elasticsearch.RemoveContentChannelItemChunks(item.Guid).Wait();
             }
 
             // Split content into chunks
-            var configuration = Util.GetConfiguration();
             var chunks = CreateChunksFromItem(item, configuration.ChunkSize, configuration.ChunkOverlap, configuration.SecondPassChunkSize);
 
             // Use parallel requests to speed things up
@@ -114,33 +112,70 @@ namespace org.abwe.Chatbots
             });
         }
 
-        // Index All Documents
-        // This method will index all documents for all content channels that are used in chatbots.
-        public void IndexAllDocuments()
+        public void IndexDocument(Guid? guid, bool removePrevious = true) {
+            var rockContext = new RockContext();
+            var item = new ContentChannelItemService(rockContext).Get(guid.Value);
+
+            ExecuteIndexRequest(rockContext, item, removePrevious);
+        }
+
+        public void IndexDocument(int ContentChannelItemId, bool removePrevious = true) {
+            // Drop and rebuild index
+            var rockContext = new RockContext();
+
+            // Get the content channel item
+            var item = new ContentChannelItemService(rockContext).Get(ContentChannelItemId);
+
+            ExecuteIndexRequest(rockContext, item, removePrevious);
+        }
+
+        /// <summary>
+        /// This method will index all documents for all content channels that are used in chatbots. If a
+        /// specific list of Guids is specified for the content channels, only those content channels will be indexed.
+        /// Otherwise, all content channels used in chatbots will be indexed.
+        /// </summary>
+        /// <param name="fromContentChannelGuids"></param>
+        public void IndexAllDocuments(List<Guid?> fromContentChannelGuids = null)
         {
             // Drop and rebuild index
             var rockContext = new RockContext();
 
-            // Get all content channels that are used in chatbots
-            var contentChannelGuids = GetContentChannelsUsedInChatbots(rockContext);
+            List<Guid?> contentChannelGuids = fromContentChannelGuids;
+
+            if (contentChannelGuids == null) {
+                // Get all content channels that are used in chatbots if not specificed
+                contentChannelGuids = GetContentChannelsUsedInChatbots(rockContext);
+            }
+
 
             // Get all content channel items for the content channels
             var contentChannelItems = GetContentChannelItems(contentChannelGuids, rockContext);
 
+            var configuration = Util.GetConfiguration();
             var openAIKey = Util.GetOpenAIKey();
             var openAi = new Interfaces.OpenAI.OpenAI(openAIKey);
-            var elasticsearch = new Elasticsearch(openAi);
+            var elasticsearch = new Elasticsearch(openAi, configuration.IndexName);
 
             // Split content into chunks
-            var configuration = Util.GetConfiguration();
             var chunks = new List<ContentChannelItemIndexDocument>();
             foreach (var item in contentChannelItems)
             {
                 chunks.AddRange(CreateChunksFromItem(item, configuration.ChunkSize, configuration.ChunkOverlap, configuration.SecondPassChunkSize));
             }
 
-            // Drop and rebuild index
-            elasticsearch.RecreateIndex();
+            if (fromContentChannelGuids == null)
+            {
+                // Drop and rebuild index, but only if we are indexing all content channels
+                elasticsearch.RecreateIndex();
+            } else {
+                // We need to remove only the content channels being indexed over again.
+                var contentChannelService = new ContentChannelService(rockContext);
+                var contentChannelIds = contentChannelService.Queryable().Where(channel => contentChannelGuids.Any(guid => guid == channel.Guid)).Select(channel => channel.Id).ToList();
+                foreach (var id in contentChannelIds)
+                {
+                    elasticsearch.RemoveContentChannelChunks(id).Wait();
+                }
+            }
 
             // Use parallel requests to speed things up
             ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 };

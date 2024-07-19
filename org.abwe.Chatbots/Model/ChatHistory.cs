@@ -54,11 +54,11 @@ namespace org.abwe.Chatbots
             });
         }
 
-        public static ChatHistorySession LoadFromSessionId(Guid? sessionId) {
+        public static ChatHistorySession LoadFromSessionId(Guid? sessionId, string botName = "") {
             List<Interaction> interactions;
             using (RockContext rockContext = new RockContext()) {
                 using (new QueryHintScope(rockContext, QueryHintType.RECOMPILE))
-                {
+                {   
                     var interactionService = new InteractionService(rockContext);
                     interactions = interactionService.Queryable().AsNoTracking()
                         .Where(i => i.InteractionSession.Guid == sessionId)
@@ -67,13 +67,24 @@ namespace org.abwe.Chatbots
                 }
             }
 
+            var history = interactions.Select(i => new ChatHistory()
+            {
+                Agent = i.Operation == "Bot" ? ChatHistoryAgent.Bot : ChatHistoryAgent.User,
+                Text = i.InteractionData,
+                Id = i.Id
+            }).ToList();
+
+            if (!history.Any()) {
+                history.Add(new ChatHistory()
+                {
+                    Agent = ChatHistoryAgent.System,
+                    Text = $"Session started with {botName}",
+                });
+            }
+
             return new ChatHistorySession() {
                 Id = sessionId,
-                History = interactions.Select(i => new ChatHistory() {
-                    Agent = i.Operation == "Bot" ? ChatHistoryAgent.Bot : ChatHistoryAgent.User,
-                    Text = i.InteractionData,
-                    Id = i.Id
-                }).ToList()
+                History = history
             };
         }
 

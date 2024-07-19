@@ -74,8 +74,10 @@ Question: {{ Input }}
     [ContentChannelsField("Content Channels", "The content channels to search for responses.", false, "", "", 4)]
     [CustomRadioListField("Style", "The style of the chat", "Inline,Popup", true, "Inline", "", 5)]
     [LinkedPage("Content Channel Item Detail Page", "This page will be used as the landing page for source links that are clicked", true, "", "", 6)]
-    [CustomRadioListField("Pre-Prompt Model", "Using a more expensive model for the pre-prompt can improve results, especially for Anthropic.", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku,Claude Sonnet,Claude Opus", true, "GPT3.5", "", 7, AttributeKey.PrePromptModel)]
-    [CustomRadioListField("Model", "The model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive. For Anthropic, Opus is the most expensive, and Haiku least.", "GPT3.5,GPT4,GPT4Turbo,Claude Haiku,Claude Sonnet,Claude Opus", true, "GPT3.5", "", 8, AttributeKey.Model)]
+    [CustomRadioListField("Pre-Prompt Model", "Using a more expensive model for the pre-prompt can improve results, especially for Anthropic.", "GPT3.5,GPT4,GPT4Turbo,GPT4o,Claude Haiku,Claude Sonnet,Claude Opus,Llama 3", true, "GPT3.5", "", 7, AttributeKey.PrePromptModel)]
+    [CustomRadioListField("Model", "The model to use for the chat. GPT-3.5 is the cheapest, and GPT-4 most expensive. For Anthropic, Opus is the most expensive, and Haiku least.", "GPT3.5,GPT4,GPT4Turbo,GPT4o,Claude Haiku,Claude Sonnet,Claude Opus,Llama 3", true, "GPT3.5", "", 8, AttributeKey.Model)]
+    [LavaField("Conversation Starter", "The Lava template to use to generate the conversation starter.", false, @"", order: 9, key: AttributeKey.ConversationStarter)]
+    [TextField("Bot Name", "The name of the bot", false, "Support Assistant", "", 10, AttributeKey.BotName)]
 
     #endregion
 
@@ -110,6 +112,8 @@ Question: {{ Input }}
             public const string PrePrompt = "PrePrompt";
             public const string Model = "Model";
             public const string PrePromptModel = "PrePromptModel";
+            public const string ConversationStarter = "ConversationStarter";
+            public const string BotName = "BotName";
         }
 
         #endregion Keys
@@ -122,8 +126,11 @@ Question: {{ Input }}
             using (var rockContext = new RockContext())
             {
                 var box = new SupportChatBox();
+                var person = GetCurrentPerson();
 
                 box.Style = GetAttributeValue("Style");
+                box.ConversationStarter = GetAttributeValue(AttributeKey.ConversationStarter).ResolveMergeFields(new Dictionary<string, object>(), currentPersonOverride: person);
+                box.BotName = GetAttributeValue(AttributeKey.BotName);
 
                 return box;
             }
@@ -212,7 +219,8 @@ Question: {{ Input }}
                 }
 
                 // var response = Request.CreateResponse();
-                var history = ChatHistorySession.LoadFromSessionId(sessionId);
+                var botName = GetAttributeValue(AttributeKey.BotName);
+                var history = ChatHistorySession.LoadFromSessionId(sessionId, botName);
                 history.AddMessage(ChatHistoryAgent.User, message);
                 history.Save(this.BlockCache, this.RequestContext);
                 
@@ -233,6 +241,9 @@ Question: {{ Input }}
                                 case "GPT4":
                                     modelToUse = Interfaces.OpenAI.Models.GPT4;
                                     break;
+                                case "GPT4o":
+                                    modelToUse = Interfaces.OpenAI.Models.GPT4o;
+                                    break;
                                 case "GPT4Turbo":
                                     modelToUse = Interfaces.OpenAI.Models.GPT4Turbo;
                                     break;
@@ -247,6 +258,10 @@ Question: {{ Input }}
                                 case "Claude Opus":
                                     llmVendor = "anthropic";
                                     modelToUse = Interfaces.Claude.Models.Opus;
+                                    break;
+                                case "Llama 3":
+                                    llmVendor = "groq";
+                                    modelToUse = Interfaces.Groq.Models.Llama3;
                                     break;
                                 default:
                                     modelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
@@ -264,6 +279,9 @@ Question: {{ Input }}
                                 case "GPT4":
                                     prePromptModelToUse = Interfaces.OpenAI.Models.GPT4;
                                     break;
+                                case "GPT4o":
+                                    prePromptModelToUse = Interfaces.OpenAI.Models.GPT4o;
+                                    break;
                                 case "GPT4Turbo":
                                     prePromptModelToUse = Interfaces.OpenAI.Models.GPT4Turbo;
                                     break;
@@ -279,12 +297,17 @@ Question: {{ Input }}
                                     prePromptLLMVendor = "anthropic";
                                     prePromptModelToUse = Interfaces.Claude.Models.Opus;
                                     break;
+                                case "Llama 3":
+                                    prePromptLLMVendor = "groq";
+                                    prePromptModelToUse = Interfaces.Groq.Models.Llama3;
+                                    break;
                                 default:
                                     prePromptModelToUse = Interfaces.OpenAI.Models.GPT35Turbo;
                                     break;
                             }
                             var openAIKey = Util.GetOpenAIKey();
                             var claudeAPIKey = Util.GetClaudeKey();
+                            var groqAPIKey = Util.GetGroqKey();
 
                             // OpenAI is currently always used for embeddings
                             var openAi = new Interfaces.OpenAI.OpenAI(openAIKey);
@@ -292,20 +315,32 @@ Question: {{ Input }}
                             IResponseGenerator LLM;
                             IResponseGenerator prepromptLLM;
                             
-                            if (llmVendor == "anthropic") {
-                                
-                                LLM = new Interfaces.Claude.Claude(claudeAPIKey);
-                            } else {
-                                LLM = openAi;
+                            switch (llmVendor) {
+                                case "anthropic":
+                                    LLM = new Interfaces.Claude.Claude(claudeAPIKey);
+                                    break;
+                                case "groq":
+                                    LLM = new Interfaces.Groq.Groq(groqAPIKey);
+                                    break;
+                                default:
+                                    LLM = openAi;
+                                    break;
                             }
 
-                            if (prePromptLLMVendor == "anthropic") {
-                                prepromptLLM = new Interfaces.Claude.Claude(claudeAPIKey);
-                            } else {
-                                prepromptLLM = openAi;
+                            switch (prePromptLLMVendor) {
+                                case "anthropic":
+                                    prepromptLLM = new Interfaces.Claude.Claude(claudeAPIKey);
+                                    break;
+                                case "groq":
+                                    prepromptLLM = new Interfaces.Groq.Groq(groqAPIKey);
+                                    break;
+                                default:
+                                    prepromptLLM = openAi;
+                                    break;
                             }
 
-                            var elasticsearch = new Elasticsearch(openAi);
+                            var configuration = Util.GetConfiguration();
+                            var elasticsearch = new Elasticsearch(openAi, configuration.IndexName);
                             var linkedPage = GetAttributeValue("ContentChannelItemDetailPage");
                             var docs = await elasticsearch.SearchVector<ContentChannelItemIndex>(message, contentChannelIds);
 
@@ -322,12 +357,16 @@ Question: {{ Input }}
                                 var docsAsJson = fullDocs.Select(doc => new {
                                     name = doc.metadata.title,
                                     url = new PageReference(linkedPage, parameters: new Dictionary<string, string>() { { "Item", doc.metadata.id.ToString() } }).BuildUrl(),
-                                    id = doc.metadata.id 
-                                }).ToJson();
+                                    id = doc.metadata.id
+                                });//.ToJson();
 
-                                await writer.WriteLineAsync($"data: DESCRIPTOR:{docsAsJson}");
+                                history.AddMessage(ChatHistoryAgent.System, docsAsJson.Select(d => $"<a href='{d.url}'>{d.name}</a>").JoinStrings("<br>").Insert(0,"Here are some resources that might help:<br>"));
+                                history.Save(this.BlockCache, this.RequestContext);
+
+                                await writer.WriteLineAsync($"data: DESCRIPTOR:{docsAsJson.ToJson()}");
                                 await writer.FlushAsync();
                             }
+
 
                             var prePrompt = GetPrePrompt(message, history.History.Take(history.History.Count - 1).ToList());
 

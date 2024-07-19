@@ -24,6 +24,7 @@ namespace org.abwe.Chatbots.Interfaces.OpenAI
         public const string GPT35Turbo = "gpt-3.5-turbo";
         public const string GPT4 = "gpt-4";
         public const string GPT4Turbo = "gpt-4-0125-preview";
+        public const string GPT4o = "gpt-4o";
     }
 
     public static class EmbeddingModels {
