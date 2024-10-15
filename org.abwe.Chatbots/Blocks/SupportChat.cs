@@ -142,7 +142,11 @@ Question: {{ Input }}
 
             if (history.Any())
             {
-                historyFormatted = history.Where(h => h.Agent != "System").Select(h => $"{h.Agent}: {h.Text}").Aggregate((a, b) => $"{a}\n{b}\n\n");
+                var nonSystemMessages = history.Where(h => h.Agent != "System");
+                if (nonSystemMessages.Any())
+                {
+                    historyFormatted = nonSystemMessages.Select(h => $"{h.Agent}: {h.Text}").Aggregate((a, b) => $"{a}\n{b}\n\n");
+                }
             }
 
             var mergeFields = new Dictionary<string, object>
