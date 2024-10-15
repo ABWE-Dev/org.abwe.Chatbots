@@ -240,7 +240,13 @@ a.response.article i {
                 </div>
                 <div class="input">
                     <div class="input-group">
-                        <input class="form-control" placeholder="Ask a question..." v-model="currentMessage" @keyup.enter="sendMessage" />
+                        <input class="form-control"
+                               placeholder="Ask a question..."
+                               v-model="currentMessage"
+                               @keypress.enter.prevent
+                               enterkeyhint="send"
+                               @keyup.enter="sendMessage"
+                               ref="messageInput" />
                         <span class="input-group-btn">
                             <button class="btn btn-default text-muted" v-if="!responding" type="button" @click="sendMessage" style="border-left: 0;"><i class="fal fa-paper-plane"></i></button>
                             <button class="btn btn-default text-muted" v-if="responding" type="button" @click="abortFetch" style="border-left: 0;"><i class="fa fa-square"></i></button>
@@ -319,7 +325,6 @@ a.response.article i {
         document.removeEventListener('fullscreenchange', updateFullscreenState);
     });
 
-    // Events
     function requestFullScreen() {
         chatRoot.value?.requestFullscreen();
     }

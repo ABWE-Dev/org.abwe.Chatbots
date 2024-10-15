@@ -1,6 +1,6 @@
 System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsidian/Utility/guid', 'https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js'], (function (exports) {
   'use strict';
-  var createTextVNode, defineComponent, ref, onMounted, onUnmounted, openBlock, createElementBlock, normalizeClass, createVNode, Transition, withCtx, createElementVNode, createCommentVNode, toDisplayString, unref, Fragment, renderList, withDirectives, withKeys, vModelText, pushScopeId, popScopeId, nextTick, useStore, useInvokeBlockAction, useConfigurationValues, useBlockGuid, newGuid;
+  var createTextVNode, defineComponent, ref, onMounted, onUnmounted, openBlock, createElementBlock, normalizeClass, createVNode, Transition, withCtx, createElementVNode, createCommentVNode, toDisplayString, unref, Fragment, renderList, withDirectives, withKeys, withModifiers, vModelText, pushScopeId, popScopeId, nextTick, useStore, useInvokeBlockAction, useConfigurationValues, useBlockGuid, newGuid;
   return {
     setters: [function (module) {
       createTextVNode = module.createTextVNode;
@@ -22,6 +22,7 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
       renderList = module.renderList;
       withDirectives = module.withDirectives;
       withKeys = module.withKeys;
+      withModifiers = module.withModifiers;
       vModelText = module.vModelText;
       pushScopeId = module.pushScopeId;
       popScopeId = module.popScopeId;
@@ -329,7 +330,10 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
                 class: "form-control",
                 placeholder: "Ask a question...",
                 "onUpdate:modelValue": _cache[0] || (_cache[0] = $event => currentMessage.value = $event),
-                onKeyup: withKeys(sendMessage, ["enter"])
+                onKeypress: _cache[1] || (_cache[1] = withKeys(withModifiers(() => {}, ["prevent"]), ["enter"])),
+                enterkeyhint: "send",
+                onKeyup: withKeys(sendMessage, ["enter"]),
+                ref: "messageInput"
               }, null, 40, _hoisted_25), [[vModelText, currentMessage.value]]), createElementVNode("span", _hoisted_26, [!responding.value ? (openBlock(), createElementBlock("button", {
                 key: 0,
                 class: "btn btn-default text-muted",
@@ -351,7 +355,7 @@ System.register(['vue', '@Obsidian/PageState', '@Obsidian/Utility/block', '@Obsi
             }), floating.value ? (openBlock(), createElementBlock("div", {
               key: 0,
               class: "btn btn-primary open-chat",
-              onClick: _cache[1] || (_cache[1] = $event => chatPanelVisible.value = !chatPanelVisible.value)
+              onClick: _cache[2] || (_cache[2] = $event => chatPanelVisible.value = !chatPanelVisible.value)
             }, [!chatPanelVisible.value ? (openBlock(), createElementBlock("i", _hoisted_31)) : (openBlock(), createElementBlock("i", _hoisted_32))])) : createCommentVNode("v-if", true)], 2);
           };
         }
